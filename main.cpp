@@ -143,14 +143,14 @@ int main(int argc, char *argv[]) {
     }
 
     auto capture = cv::VideoCapture(argv[1]);
-    const  auto frameRate = capture.get(cv::CAP_PROP_FPS);
+    const auto frameRate = capture.get(cv::CAP_PROP_FPS);
     const auto frameDuration = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / frameRate));
 
     auto frame = cv::Mat();
 
     SetConsoleOutputCP(CP_UTF8);
 
-    std::cout << "\x1b[?25l";
+    std::cout << "\x1b[?25l"; // Hide cursor
 
     const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD ret;
@@ -165,11 +165,10 @@ int main(int argc, char *argv[]) {
     std::system(std::format("ffmpeg -i \"{}\" {}", argv[1], TEMP_AUDIO_FILE_PATH).c_str());
     std::cout << "\x1b[2J";
     PlaySound(TEMP_AUDIO_FILE_PATH, nullptr, SND_FILENAME | SND_ASYNC);
-
-    std::chrono::time_point<std::chrono::steady_clock> beginFrameTime = std::chrono::high_resolution_clock::now();
-    auto timeError = std::chrono::duration<long long, std::ratio<1, 1000000000>>::zero();
+    const std::chrono::time_point<std::chrono::steady_clock> beginPlayTime = std::chrono::high_resolution_clock::now();
 
     while (true) {
+        auto beginFrameTime = std::chrono::high_resolution_clock::now();
         CONSOLE_SCREEN_BUFFER_INFO csbi;
         GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
         const int32_t columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
@@ -178,8 +177,8 @@ int main(int argc, char *argv[]) {
         if (!capture.read(frame)) {
             break;
         }
-        if (timeError > frameDuration) {
-            timeError -= frameDuration;
+        const auto framePosition = std::chrono::duration<long long, std::ratio<1, 1000000000>>(static_cast<long long>(capture.get(cv::CAP_PROP_POS_MSEC) * 1e6));
+        if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration) {
             continue;
         }
 
@@ -216,15 +215,13 @@ int main(int argc, char *argv[]) {
         WriteConsoleA(consoleOutput, buffer, bufferSize, &ret, nullptr);
         auto endPrintingTime = std::chrono::high_resolution_clock::now();
 
-        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginFrameTime) < frameDuration) {}
+        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition < frameDuration) {}
         auto endFrameTime = std::chrono::steady_clock::now();
-        timeError += std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime - frameDuration);
 
         std::cout << "\x1b[0;0m";
         std::cout << "Render time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginFrameTime).count() / 1e6) << "ms "
         << " Printing time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endPrintingTime - beginPrintingTime).count() / 1e6) << "ms "
         << "Frame time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6) << "ms";
-        beginFrameTime = endFrameTime;
     }
     std::remove(TEMP_AUDIO_FILE_PATH);
     return EXIT_SUCCESS;

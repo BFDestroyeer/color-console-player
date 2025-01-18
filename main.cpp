@@ -1,15 +1,14 @@
-#include <opencv2/opencv.hpp>
-
+#include <csignal>
 #include <Windows.h>
+
+#include <opencv2/opencv.hpp>
 
 #include "color.hpp"
 
 #pragma comment(lib, "winmm.lib")
 
-constexpr auto SYMBOL_SIZE = 24;
 constexpr auto FULL_SYMBOL_SIZE = 41;
-
-constexpr auto FRAME_DURATION = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / 23.98));
+constexpr char TEMP_AUDIO_FILE_PATH[] = "~temp_audio.wav";
 
 int getColor(
     const cv::Vec3s &foreground,
@@ -25,9 +24,8 @@ int getColor(
 void imageToTextFull(
     const cv::Mat&image,
     const uint64_t horizontalOffset,
-    char* buffer
+    uint8_t* buffer
 ) {
-#pragma omp parallel for
     for (int32_t y = 0; y < image.rows; y += 2) {
         for (int32_t x = 0; x < image.cols; x += 2) {
             const auto ul = image.at<cv::Vec3b>(y, x);
@@ -42,16 +40,80 @@ void imageToTextFull(
 
             const auto convolution = (getColor(foreground, background, br) << 3) + (getColor(foreground, background, ur) << 2) + (getColor(foreground, background,bl) << 1) + getColor(foreground, background, br);
 
+            // \x1b[38;2;<R>;<G>;<B>m\x1b[48;2;<R>;<G>;<B>m<SYMBOL>
             std::memcpy(
                 buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE,
-                std::format("\x1b[38;2;{:03d};{:03d};{:03d}m\x1b[48;2;{:03d};{:03d};{:03d}m{}",
-                            foreground[2], foreground[1], foreground[0],
-                            background[2], background[1], background[0],
-                            symbolByConvolution(convolution)
-                ).c_str(),
-                FULL_SYMBOL_SIZE
+                "\x1b[38;2;",
+                7
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 7,
+                colorToText(foreground[2]),
+                3
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 10,
+                ";",
+                1
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 11,
+                colorToText(foreground[1]),
+                3
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 14,
+                ";",
+                1
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 15,
+                colorToText(foreground[0]),
+                3
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 18,
+                "m\x1b[48;2;",
+                8
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 26,
+                colorToText(background[2]),
+                3
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 29,
+                ";",
+                1
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 30,
+                colorToText(background[1]),
+                3
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 33,
+                ";",
+                1
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 34,
+                colorToText(background[0]),
+                3
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 37,
+                "m",
+                1
+            );
+            std::memcpy(
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE + 38,
+                symbolByConvolution(convolution),
+                3
             );
         }
+
+        // Reset color mode and end line
         std::memcpy(
             buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE,
             "\x1b[0;0m\n",
@@ -60,12 +122,19 @@ void imageToTextFull(
     }
 }
 
+void exitSignalHandler(int){
+    std::remove(TEMP_AUDIO_FILE_PATH);
+    std::exit(EXIT_SUCCESS);
+}
 
 // 16 x 33 font size
 // 236 x 63 symbol resolution
 // 3776 x 2079 effective resolution
 int main() {
     auto capture = cv::VideoCapture("E:/Source/color-console-player/video.mp4");
+    const  auto frameRate = capture.get(cv::CAP_PROP_FPS);
+    const auto frameDuration = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / frameRate));
+
     auto frame = cv::Mat();
 
     SetConsoleOutputCP(CP_UTF8);
@@ -75,18 +144,23 @@ int main() {
     const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD ret;
 
-    auto previousColumns = -1;
-    auto previousRows = -1;
-    char* buffer = nullptr;
+    int32_t previousColumns = -1;
+    int32_t previousRows = -1;
+    uint8_t* buffer = nullptr;
 
-    PlaySound("E:/Source/color-console-player/audio.wav", nullptr, SND_FILENAME | SND_ASYNC);
+    signal(SIGINT, exitSignalHandler);
+    signal(SIGTERM, exitSignalHandler);
+
+    std::system(std::format("ffmpeg -i \"{}\" {}", "E:/Source/color-console-player/video.mp4", TEMP_AUDIO_FILE_PATH).c_str());
+    std::cout << "\x1b[2J";
+    PlaySound(TEMP_AUDIO_FILE_PATH, nullptr, SND_FILENAME | SND_ASYNC);
 
     while (true) {
         auto beginTime = std::chrono::high_resolution_clock::now();
         CONSOLE_SCREEN_BUFFER_INFO csbi;
         GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-        const auto columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-        const auto rows = csbi.srWindow.Bottom - csbi.srWindow.Top;
+        const int32_t columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+        const int32_t rows = csbi.srWindow.Bottom - csbi.srWindow.Top;
 
         if (!capture.read(frame)) {
             break;
@@ -105,10 +179,10 @@ int main() {
             symbolWidth = static_cast<int>(rows / frameAspectRatio * (33.0 / 16.0));
         }
 
-        auto bufferSize = ((columns - symbolWidth) / 2 + FULL_SYMBOL_SIZE * symbolWidth + 7) * symbolHeight + 1;
+        const int32_t bufferSize = ((columns - symbolWidth) / 2 + FULL_SYMBOL_SIZE * symbolWidth + 7) * symbolHeight + 1;
         if (previousColumns != columns || previousRows != rows) {
             delete[] buffer;
-            buffer = new char[bufferSize];
+            buffer = new uint8_t[bufferSize];
             std::memset(buffer, ' ', bufferSize - 1);
             buffer[bufferSize - 1] = 0x0;
         }
@@ -125,7 +199,7 @@ int main() {
         WriteConsoleA(consoleOutput, buffer, bufferSize, &ret, nullptr);
         auto endPrintingTime = std::chrono::high_resolution_clock::now();
 
-        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginTime) < FRAME_DURATION) {}
+        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginTime) < frameDuration) {}
         auto endFrameTime = std::chrono::steady_clock::now();
 
         std::cout << "\x1b[0;0m";
@@ -133,4 +207,6 @@ int main() {
         << " Printing time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endPrintingTime - beginPrintingTime).count() / 1e6) << "ms "
         << "Frame time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginTime).count() / 1e6) << "ms";
     }
+    std::remove(TEMP_AUDIO_FILE_PATH);
+    return EXIT_SUCCESS;
 }

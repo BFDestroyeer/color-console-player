@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.29)
 project(color_console_player)
 
 set(CMAKE_CXX_STANDARD 20)
 
+# OpenCV
 find_package(OpenCV REQUIRED)
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 

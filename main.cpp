@@ -45,7 +45,7 @@ void imageToTextFull(
             const auto convolution = (getColor(foreground, background, br) << 3) + (getColor(foreground, background, ur) << 2) + (getColor(foreground, background,bl) << 1) + getColor(foreground, background, br);
 
             std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 1) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE,
+                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 2) * FULL_SYMBOL_SIZE,
                 std::format("\x1b[38;2;{:03d};{:03d};{:03d}m\x1b[48;2;{:03d};{:03d};{:03d}m{}",
                             foreground[2], foreground[1], foreground[0],
                             background[2], background[1], background[0],
@@ -54,7 +54,11 @@ void imageToTextFull(
                 FULL_SYMBOL_SIZE
             );
         }
-        buffer[(y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 1) + horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE] = '\n';
+        std::memcpy(
+            buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE,
+            "\x1b[0;0m\n",
+            7
+        );
     }
 }
 
@@ -100,7 +104,7 @@ int main() {
             symbolWidth = static_cast<uint64_t>(rows / frameAspectRatio * (33.0 / 16.0));
         }
 
-        auto bufferSize = ((columns - symbolWidth) / 2 + FULL_SYMBOL_SIZE * symbolWidth + 1) * symbolHeight + 1;
+        auto bufferSize = ((columns - symbolWidth) / 2 + FULL_SYMBOL_SIZE * symbolWidth + 7) * symbolHeight + 1;
         auto buffer = new char[bufferSize];
         std::memset(buffer, ' ', bufferSize - 1);
         buffer[bufferSize - 1] = 0x0;

@@ -167,6 +167,7 @@ int main(int argc, char *argv[]) {
     PlaySound(TEMP_AUDIO_FILE_PATH, nullptr, SND_FILENAME | SND_ASYNC);
 
     std::chrono::time_point<std::chrono::steady_clock> beginFrameTime = std::chrono::high_resolution_clock::now();
+    auto timeError = std::chrono::duration<long long, std::ratio<1, 1000000000>>::zero();
 
     while (true) {
         CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -176,6 +177,10 @@ int main(int argc, char *argv[]) {
 
         if (!capture.read(frame)) {
             break;
+        }
+        if (timeError > frameDuration) {
+            timeError -= frameDuration;
+            continue;
         }
 
         const double screenHeight = rows * 33;
@@ -213,6 +218,7 @@ int main(int argc, char *argv[]) {
 
         while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginFrameTime) < frameDuration) {}
         auto endFrameTime = std::chrono::steady_clock::now();
+        timeError += std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime - frameDuration);
 
         std::cout << "\x1b[0;0m";
         std::cout << "Render time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginFrameTime).count() / 1e6) << "ms "

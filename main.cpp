@@ -2,7 +2,7 @@
 
 #include <Windows.h>
 
-#include "color.h"
+#include "color.hpp"
 
 #pragma comment(lib, "winmm.lib")
 
@@ -10,8 +10,6 @@ constexpr auto SYMBOL_SIZE = 24;
 constexpr auto FULL_SYMBOL_SIZE = 41;
 
 constexpr auto FRAME_DURATION = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / 23.98));
-
-constexpr char SPACE[] = {0x1, 0x1, 0x20, 0x0};
 
 int getColor(
     const cv::Vec3s &foreground,
@@ -63,9 +61,9 @@ void imageToTextFull(
 }
 
 
-// 16 x 33
-// 236 x 63
-// 3776 x 2079
+// 16 x 33 font size
+// 236 x 63 symbol resolution
+// 3776 x 2079 effective resolution
 int main() {
     auto capture = cv::VideoCapture("E:/Source/color-console-player/video.mp4");
     auto frame = cv::Mat();
@@ -74,10 +72,14 @@ int main() {
 
     std::cout << "\x1b[?25l";
 
-    auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD ret;
 
-    PlaySound("E:/Source/color-console-player/audio.wav", NULL, SND_FILENAME | SND_ASYNC);
+    auto previousColumns = -1;
+    auto previousRows = -1;
+    char* buffer = nullptr;
+
+    PlaySound("E:/Source/color-console-player/audio.wav", nullptr, SND_FILENAME | SND_ASYNC);
 
     while (true) {
         auto beginTime = std::chrono::high_resolution_clock::now();
@@ -87,27 +89,31 @@ int main() {
         const auto rows = csbi.srWindow.Bottom - csbi.srWindow.Top;
 
         if (!capture.read(frame)) {
-            std::cout << "Cant read frame" << std::endl;
             break;
         }
 
         const double screenHeight = rows * 33;
         const double screenWidth = columns * 16;
         const double frameAspectRatio = static_cast<double>(frame.rows) / static_cast<double>(frame.cols) ;
-        uint64_t symbolHeight, symbolWidth;
+        int symbolHeight, symbolWidth;
         if (screenHeight / screenWidth > frameAspectRatio) {
-            symbolHeight = static_cast<uint64_t>(columns * frameAspectRatio * (16.0 / 33.0));
+            symbolHeight = static_cast<int>(columns * frameAspectRatio * (16.0 / 33.0));
             symbolWidth = columns;
         }
         else {
             symbolHeight = rows;
-            symbolWidth = static_cast<uint64_t>(rows / frameAspectRatio * (33.0 / 16.0));
+            symbolWidth = static_cast<int>(rows / frameAspectRatio * (33.0 / 16.0));
         }
 
         auto bufferSize = ((columns - symbolWidth) / 2 + FULL_SYMBOL_SIZE * symbolWidth + 7) * symbolHeight + 1;
-        auto buffer = new char[bufferSize];
-        std::memset(buffer, ' ', bufferSize - 1);
-        buffer[bufferSize - 1] = 0x0;
+        if (previousColumns != columns || previousRows != rows) {
+            delete[] buffer;
+            buffer = new char[bufferSize];
+            std::memset(buffer, ' ', bufferSize - 1);
+            buffer[bufferSize - 1] = 0x0;
+        }
+        previousColumns = columns;
+        previousRows = rows;
 
         cv::resize(frame, frame, cv::Size(symbolWidth * 2, symbolHeight * 2));
 
@@ -119,7 +125,6 @@ int main() {
         WriteConsoleA(consoleOutput, buffer, bufferSize, &ret, nullptr);
         auto endPrintingTime = std::chrono::high_resolution_clock::now();
 
-        delete[] buffer;
         while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginTime) < FRAME_DURATION) {}
         auto endFrameTime = std::chrono::steady_clock::now();
 

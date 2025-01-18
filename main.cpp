@@ -1,4 +1,6 @@
 #include <csignal>
+#include <filesystem>
+
 #include <Windows.h>
 
 #include <opencv2/opencv.hpp>
@@ -130,8 +132,17 @@ void exitSignalHandler(int){
 // 16 x 33 font size
 // 236 x 63 symbol resolution
 // 3776 x 2079 effective resolution
-int main() {
-    auto capture = cv::VideoCapture("E:/Source/color-console-player/video.mp4");
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        std::cout << "Usage: " << argv[0] << " <path to file>" << std::endl;
+        return EXIT_FAILURE;
+    }
+    if (!std::filesystem::exists(argv[1])) {
+        std::cout << "File " << argv[1] << " does not exist" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    auto capture = cv::VideoCapture(argv[1]);
     const  auto frameRate = capture.get(cv::CAP_PROP_FPS);
     const auto frameDuration = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / frameRate));
 
@@ -151,12 +162,13 @@ int main() {
     signal(SIGINT, exitSignalHandler);
     signal(SIGTERM, exitSignalHandler);
 
-    std::system(std::format("ffmpeg -i \"{}\" {}", "E:/Source/color-console-player/video.mp4", TEMP_AUDIO_FILE_PATH).c_str());
+    std::system(std::format("ffmpeg -i \"{}\" {}", argv[1], TEMP_AUDIO_FILE_PATH).c_str());
     std::cout << "\x1b[2J";
     PlaySound(TEMP_AUDIO_FILE_PATH, nullptr, SND_FILENAME | SND_ASYNC);
 
+    std::chrono::time_point<std::chrono::steady_clock> beginFrameTime = std::chrono::high_resolution_clock::now();
+
     while (true) {
-        auto beginTime = std::chrono::high_resolution_clock::now();
         CONSOLE_SCREEN_BUFFER_INFO csbi;
         GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
         const int32_t columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
@@ -199,13 +211,14 @@ int main() {
         WriteConsoleA(consoleOutput, buffer, bufferSize, &ret, nullptr);
         auto endPrintingTime = std::chrono::high_resolution_clock::now();
 
-        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginTime) < frameDuration) {}
+        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginFrameTime) < frameDuration) {}
         auto endFrameTime = std::chrono::steady_clock::now();
 
         std::cout << "\x1b[0;0m";
-        std::cout << "Render time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginTime).count() / 1e6) << "ms "
+        std::cout << "Render time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginFrameTime).count() / 1e6) << "ms "
         << " Printing time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endPrintingTime - beginPrintingTime).count() / 1e6) << "ms "
-        << "Frame time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginTime).count() / 1e6) << "ms";
+        << "Frame time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6) << "ms";
+        beginFrameTime = endFrameTime;
     }
     std::remove(TEMP_AUDIO_FILE_PATH);
     return EXIT_SUCCESS;

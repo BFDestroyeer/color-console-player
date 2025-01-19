@@ -27,91 +27,97 @@ void imageToTextFull(const cv::Mat &image, const uint64_t horizontalOffset, uint
             const auto &bottomLeft = image.at<cv::Vec3b>(y + 1, x);
             const auto &bottomRight = image.at<cv::Vec3b>(y + 1, x + 1);
 
-            auto [foreground, background] = getColors(upperLeft, upperRight, bottomLeft, bottomRight);
+            auto [firstForeground, firstBackground] = getColors(upperLeft, upperRight, bottomLeft, bottomRight);
 
-            const auto convolution = (getColor(foreground, background, bottomRight) << 3) +
-                                     (getColor(foreground, background, upperRight) << 2) +
-                                     (getColor(foreground, background, bottomLeft) << 1) + getColor(foreground, background, bottomRight);
+            auto secondForeground = cv::Vec3s(0, 0, 0);
+            auto secondBackground = cv::Vec3s(0, 0, 0);
+            uint8_t foregroundClusterSize = 0;
+            uint8_t backgroundClusterSize = 0;
+            if (getColor(firstForeground, firstBackground, upperLeft)) {
+                foregroundClusterSize++;
+                secondForeground += upperLeft;
+            } else {
+                backgroundClusterSize++;
+                secondBackground += upperLeft;
+            }
+            if (getColor(firstForeground, firstBackground, upperRight)) {
+                foregroundClusterSize++;
+                secondForeground += upperRight;
+            } else {
+                backgroundClusterSize++;
+                secondBackground += upperRight;
+            }
+            if (getColor(firstForeground, firstBackground, bottomLeft)) {
+                foregroundClusterSize++;
+                secondForeground += bottomLeft;
+            } else {
+                backgroundClusterSize++;
+                secondBackground += bottomLeft;
+            }
+            if (getColor(firstForeground, firstBackground, bottomRight)) {
+                foregroundClusterSize++;
+                secondForeground += bottomRight;
+            } else {
+                backgroundClusterSize++;
+                secondBackground += bottomRight;
+            }
+            secondForeground *= 1.0 / foregroundClusterSize;
+            secondBackground *= 1.0 / backgroundClusterSize;
+
+            const auto convolution = (getColor(secondForeground, secondBackground, bottomRight) << 3) +
+                                     (getColor(secondForeground, secondBackground, upperRight) << 2) +
+                                     (getColor(secondForeground, secondBackground, bottomLeft) << 1) +
+                                     getColor(secondForeground, secondBackground, bottomRight);
 
             // \x1b[38;2;<R>;<G>;<B>m\x1b[48;2;<R>;<G>;<B>m<SYMBOL>
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE,
-                "\x1b[38;2;",
-                7);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 7,
-                colorToText(foreground[2]),
-                3);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 10,
-                ";",
-                1);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 11,
-                colorToText(foreground[1]),
-                3);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 14,
-                ";",
-                1);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 15,
-                colorToText(foreground[0]),
-                3);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 18,
-                "m\x1b[48;2;",
-                8);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 26,
-                colorToText(background[2]),
-                3);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 29,
-                ";",
-                1);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 30,
-                colorToText(background[1]),
-                3);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 33,
-                ";",
-                1);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 34,
-                colorToText(background[0]),
-                3);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 37,
-                "m",
-                1);
-            std::memcpy(
-                buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 2) * FULL_SYMBOL_SIZE + 38,
-                symbolByConvolution(convolution),
-                3);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE,
+                        "\x1b[38;2;", 7);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 7,
+                        colorToText(secondForeground[2]), 3);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 10,
+                        ";", 1);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 11,
+                        colorToText(secondForeground[1]), 3);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 14,
+                        ";", 1);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 15,
+                        colorToText(secondForeground[0]), 3);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 18,
+                        "m\x1b[48;2;", 8);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 26,
+                        colorToText(secondBackground[2]), 3);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 29,
+                        ";", 1);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 30,
+                        colorToText(secondBackground[1]), 3);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 33,
+                        ";", 1);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 34,
+                        colorToText(secondBackground[0]), 3);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 37,
+                        "m", 1);
+            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 2) * FULL_SYMBOL_SIZE + 38,
+                        symbolByConvolution(convolution), 3);
         }
 
         // Reset color mode and end line
-        std::memcpy(
-            buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (image.cols / 2) * FULL_SYMBOL_SIZE,
-            "\x1b[0;0m\n",
-            7);
+        std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                        (image.cols / 2) * FULL_SYMBOL_SIZE,
+                    "\x1b[0;0m\n", 7);
     }
 }
 
@@ -214,17 +220,18 @@ int main(int argc, char *argv[]) {
         auto endFrameTime = std::chrono::steady_clock::now();
 
         std::cout << "\x1b[0;0m";
-        std::cout
-            << "Render time: "
-            << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginFrameTime).count() / 1e6)
-            << "ms "
-            << " Printing time: "
-            << std::format(
-                   "{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endPrintingTime - beginPrintingTime).count() / 1e6)
-            << "ms "
-            << "Frame time: "
-            << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
-            << "ms";
+        std::cout << "Render time: "
+                  << std::format("{:10.3f}",
+                                 std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginFrameTime).count() / 1e6)
+                  << "ms "
+                  << " Printing time: "
+                  << std::format("{:10.3f}",
+                                 std::chrono::duration_cast<std::chrono::nanoseconds>(endPrintingTime - beginPrintingTime).count() / 1e6)
+                  << "ms "
+                  << "Frame time: "
+                  << std::format("{:10.3f}",
+                                 std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
+                  << "ms";
     }
     std::remove(TEMP_AUDIO_FILE_PATH);
     return EXIT_SUCCESS;

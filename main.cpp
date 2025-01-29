@@ -1,20 +1,21 @@
 #include <csignal>
-#include <stdio.h>
 #include <filesystem>
+#include <stdio.h>
 
 #ifdef _WIN32
 #include <Windows.h>
 #endif _WIN32
 
 #ifdef __unix__
-#include <sys/ioctl.h>
 #include <cstdio>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #endif __unix__
 
 #include <opencv2/opencv.hpp>
 
 #include "color.hpp"
+#include "system.hpp"
 
 #pragma comment(lib, "winmm.lib")
 
@@ -171,11 +172,10 @@ int main(int argc, char *argv[]) {
     signal(SIGTERM, exitSignalHandler);
 
 #ifdef _WIN32
-    _popen(std::format("ffplay \"{}\" -nodisp -autoexit -loglevel quiet", argv[1]).c_str(), "r");
+    auto executableDir = std::filesystem::path(argv[0]).parent_path();
+    _popen(std::format("{}\\ffplay.exe \"{}\" -nodisp -autoexit -loglevel quiet", executableDir.string(), argv[1]).c_str(), "r");
 #endif _WIN32
-#ifdef __unix__
-    std::system("clear");
-#endif __unix__
+
     std::cout << "\x1b[2J";
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();
 
@@ -221,6 +221,7 @@ int main(int argc, char *argv[]) {
             buffer = new uint8_t[bufferSize];
             std::memset(buffer, ' ', bufferSize - 1);
             buffer[bufferSize - 1] = 0x0;
+            clearScreen();
         }
         previousColumns = columns;
         previousRows = rows;

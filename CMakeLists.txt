@@ -10,5 +10,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_executable(color_console_player main.cpp color.hpp)
+add_executable(color_console_player main.cpp color.hpp
+        system.hpp)
 target_link_libraries(color_console_player ${OpenCV_LIBS})

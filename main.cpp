@@ -1,7 +1,15 @@
 #include <csignal>
 #include <filesystem>
 
+#ifdef _WIN32
 #include <Windows.h>
+#endif _WIN32
+
+#ifdef __unix__
+#include <sys/ioctl.h>
+#include <cstdio>
+#include <unistd.h>
+#endif __unix__
 
 #include <opencv2/opencv.hpp>
 
@@ -145,12 +153,14 @@ int main(int argc, char *argv[]) {
 
     auto frame = cv::Mat();
 
+#ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
-
-    std::cout << "\x1b[?25l"; // Hide cursor
 
     const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD ret;
+#endif _WIN32
+
+    std::cout << "\x1b[?25l"; // Hide cursor
 
     int32_t previousColumns = -1;
     int32_t previousRows = -1;
@@ -159,18 +169,31 @@ int main(int argc, char *argv[]) {
     signal(SIGINT, exitSignalHandler);
     signal(SIGTERM, exitSignalHandler);
 
+#ifdef _WIN32
     std::system(std::format("ffmpeg -i \"{}\" {}", argv[1], TEMP_AUDIO_FILE_PATH).c_str());
     std::system("cls");
-    std::cout << "\x1b[2J";
     PlaySound(TEMP_AUDIO_FILE_PATH, nullptr, SND_FILENAME | SND_ASYNC);
-    const std::chrono::time_point<std::chrono::steady_clock> beginPlayTime = std::chrono::high_resolution_clock::now();
+#endif _WIN32
+#ifdef __unix__
+    std::system("clear");
+#endif __unix__
+    std::cout << "\x1b[2J";
+    const auto beginPlayTime = std::chrono::high_resolution_clock::now();
 
     while (true) {
         auto beginFrameTime = std::chrono::high_resolution_clock::now();
+#ifdef _WIN32
         CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo;
         GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
         const int32_t columns = consoleScreenBufferInfo.srWindow.Right - consoleScreenBufferInfo.srWindow.Left + 1;
         const int32_t rows = consoleScreenBufferInfo.srWindow.Bottom - consoleScreenBufferInfo.srWindow.Top;
+#endif _WIN32
+#ifdef __unix__
+        winsize windowSize{};
+        ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize);
+        const int32_t columns = windowSize.ws_col;
+        const int32_t rows = windowSize.ws_row - 1;
+#endif __unix__
 
         if (!capture.read(frame)) {
             break;
@@ -209,15 +232,22 @@ int main(int argc, char *argv[]) {
         auto endRenderTime = std::chrono::high_resolution_clock::now();
 
         auto beginPrintingTime = std::chrono::high_resolution_clock::now();
+#ifdef _WIN32
         SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), {0, 0});
         WriteConsoleA(consoleOutput, buffer, bufferSize, &ret, nullptr);
+#endif _WIN32
+#ifdef __unix__
+        std::cout << "\x1b[0;0H";
+        std::fwrite(buffer, bufferSize, 1, stdout);
+        std::fflush(stdout);
+#endif __unix__
         auto endPrintingTime = std::chrono::high_resolution_clock::now();
 
         while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
                    framePosition <
                frameDuration) {
         }
-        auto endFrameTime = std::chrono::steady_clock::now();
+        auto endFrameTime = std::chrono::high_resolution_clock::now();
 
         std::cout << "\x1b[0;0m";
         std::cout << "Render time: "

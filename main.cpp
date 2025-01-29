@@ -1,4 +1,5 @@
 #include <csignal>
+#include <stdio.h>
 #include <filesystem>
 
 #ifdef _WIN32
@@ -170,9 +171,7 @@ int main(int argc, char *argv[]) {
     signal(SIGTERM, exitSignalHandler);
 
 #ifdef _WIN32
-    std::system(std::format("ffmpeg -i \"{}\" {}", argv[1], TEMP_AUDIO_FILE_PATH).c_str());
-    std::system("cls");
-    PlaySound(TEMP_AUDIO_FILE_PATH, nullptr, SND_FILENAME | SND_ASYNC);
+    _popen(std::format("ffplay \"{}\" -nodisp -autoexit -loglevel quiet", argv[1]).c_str(), "r");
 #endif _WIN32
 #ifdef __unix__
     std::system("clear");

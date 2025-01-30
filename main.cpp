@@ -15,14 +15,13 @@
 #include <opencv2/opencv.hpp>
 
 #include "color.hpp"
-#include "system.hpp"
 
 #pragma comment(lib, "winmm.lib")
 
 constexpr auto FULL_SYMBOL_SIZE = 41;
 constexpr char TEMP_AUDIO_FILE_PATH[] = "~temp_audio.wav";
 
-int32_t getColor(const cv::Vec3s &foreground, const cv::Vec3s &background, const cv::Vec3s &color) {
+uint16_t getColor(const cv::Vec3s &foreground, const cv::Vec3s &background, const cv::Vec3s &color) {
     if (cv::norm(foreground - color) < cv::norm(background - color)) {
         return 1;
     }
@@ -30,103 +29,96 @@ int32_t getColor(const cv::Vec3s &foreground, const cv::Vec3s &background, const
 }
 
 void imageToTextFull(const cv::Mat &image, const uint64_t horizontalOffset, uint8_t *buffer) {
-    for (int32_t y = 0; y < image.rows; y += 2) {
-        for (int32_t x = 0; x < image.cols; x += 2) {
-            const auto &upperLeft = image.at<cv::Vec3b>(y, x);
-            const auto &upperRight = image.at<cv::Vec3b>(y, x + 1);
-            const auto &bottomLeft = image.at<cv::Vec3b>(y + 1, x);
-            const auto &bottomRight = image.at<cv::Vec3b>(y + 1, x + 1);
+    auto colorBuffer = new const cv::Vec3b*[16];
 
-            auto [firstForeground, firstBackground] = getColors(upperLeft, upperRight, bottomLeft, bottomRight);
+    for (int32_t y = 0; y < image.rows; y += 4) {
+        for (int32_t x = 0; x < image.cols; x += 4) {
+
+            auto& firstForeground = image.at<cv::Vec3b>(y, x);
+            auto& firstBackground = image.at<cv::Vec3b>(y + 3, x + 3);
 
             auto secondForeground = cv::Vec3s(0, 0, 0);
             auto secondBackground = cv::Vec3s(0, 0, 0);
             uint8_t foregroundClusterSize = 0;
             uint8_t backgroundClusterSize = 0;
-            if (getColor(firstForeground, firstBackground, upperLeft)) {
-                foregroundClusterSize++;
-                secondForeground += upperLeft;
-            } else {
-                backgroundClusterSize++;
-                secondBackground += upperLeft;
-            }
-            if (getColor(firstForeground, firstBackground, upperRight)) {
-                foregroundClusterSize++;
-                secondForeground += upperRight;
-            } else {
-                backgroundClusterSize++;
-                secondBackground += upperRight;
-            }
-            if (getColor(firstForeground, firstBackground, bottomLeft)) {
-                foregroundClusterSize++;
-                secondForeground += bottomLeft;
-            } else {
-                backgroundClusterSize++;
-                secondBackground += bottomLeft;
-            }
-            if (getColor(firstForeground, firstBackground, bottomRight)) {
-                foregroundClusterSize++;
-                secondForeground += bottomRight;
-            } else {
-                backgroundClusterSize++;
-                secondBackground += bottomRight;
+
+            for (int32_t localY = 0; localY < 4; localY++) {
+                for (int32_t localX = 0; localX < 4; localX++) {
+                    auto& color = image.at<cv::Vec3b>(y + localY, x + localX);
+                    if (getColor(firstForeground, firstBackground, color)) {
+                        foregroundClusterSize++;
+                        secondForeground += color;
+                    } else {
+                        backgroundClusterSize++;
+                        secondBackground += color;
+                    }
+                }
             }
             secondForeground *= 1.0 / foregroundClusterSize;
             secondBackground *= 1.0 / backgroundClusterSize;
 
-            const auto convolution = (getColor(secondForeground, secondBackground, bottomRight) << 3) +
-                                     (getColor(secondForeground, secondBackground, upperRight) << 2) +
-                                     (getColor(secondForeground, secondBackground, bottomLeft) << 1) +
-                                     getColor(secondForeground, secondBackground, bottomRight);
+
+            uint16_t convolutionFull = 0x0;
+            for (int32_t localY = 0; localY < 4; localY++) {
+                for (int32_t localX = 0; localX < 4; localX++) {
+                    const int32_t index = y * image.cols + localX;
+                    convolutionFull += getColor(secondForeground, secondBackground, image.at<cv::Vec3b>(y + localY, x + localX)) << index;
+                }
+            }
+
+            auto [symbol, needSwap] = symbolByConvolutionFull(convolutionFull);
+            if (needSwap) {
+                std::swap(secondForeground, secondBackground);
+            }
 
             // \x1b[38;2;<R>;<G>;<B>m\x1b[48;2;<R>;<G>;<B>m<SYMBOL>
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE,
                         "\x1b[38;2;", 7);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 7,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 7,
                         colorToText(secondForeground[2]), 3);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 10,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 10,
                         ";", 1);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 11,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 11,
                         colorToText(secondForeground[1]), 3);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 14,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 14,
                         ";", 1);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 15,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 15,
                         colorToText(secondForeground[0]), 3);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 18,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 18,
                         "m\x1b[48;2;", 8);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 26,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 26,
                         colorToText(secondBackground[2]), 3);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 29,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 29,
                         ";", 1);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 30,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 30,
                         colorToText(secondBackground[1]), 3);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 33,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 33,
                         ";", 1);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 34,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 34,
                         colorToText(secondBackground[0]), 3);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 37,
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 37,
                         "m", 1);
-            std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 2) * FULL_SYMBOL_SIZE + 38,
-                        symbolByConvolution(convolution), 3);
+            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                            (x / 4) * FULL_SYMBOL_SIZE + 38,
+                        symbol, 3);
         }
 
         // Reset color mode and end line
-        std::memcpy(buffer + (y / 2) * (horizontalOffset + (image.cols / 2) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                        (image.cols / 2) * FULL_SYMBOL_SIZE,
+        std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                        (image.cols / 4) * FULL_SYMBOL_SIZE,
                     "\x1b[0;0m\n", 7);
     }
 }
@@ -221,12 +213,17 @@ int main(int argc, char *argv[]) {
             buffer = new uint8_t[bufferSize];
             std::memset(buffer, ' ', bufferSize - 1);
             buffer[bufferSize - 1] = 0x0;
-            clearScreen();
+#ifdef _WIN32
+            std::system("cls");
+#endif _WIN32
+#ifdef __unix__
+            std::system("clear");
+#endif __unix__
         }
         previousColumns = columns;
         previousRows = rows;
 
-        cv::resize(frame, frame, cv::Size(symbolWidth * 2, symbolHeight * 2));
+        cv::resize(frame, frame, cv::Size(symbolWidth * 4, symbolHeight * 4));
 
         imageToTextFull(frame, (columns - symbolWidth) / 2, buffer);
         auto endRenderTime = std::chrono::high_resolution_clock::now();

@@ -68,8 +68,50 @@ inline const char *symbolByConvolution(const uint8_t convolution) {
     case 0b1111:
         return "█";
     default:
-        return " ";
+        return SPACE;
     }
+}
+
+inline std::pair<const char*, boolean> symbolByConvolutionFull(const uint16_t convolution) {
+    int32_t max = 0;
+    const char* symbol = SPACE;
+    bool needSwap = false;
+    //(3,3)(3,2)(3,1)(3,0)(2,3)(2,2)(2,1)(2,0)(1,3)(1,2)(1,1)(1,0)
+    if (__popcnt16(~(convolution ^ 0b1111111111111111)) > max) {
+        // Full block
+        max = __popcnt16(~(convolution ^ 0b1111111111111111));
+        symbol = "█";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b1111000000000000)) > max) {
+        // Upper quarter
+        max = __popcnt16(~(convolution ^ 0b1111000000000000));
+        symbol = "▆";
+        needSwap = true;
+    }
+    if (__popcnt16(~(convolution ^ 0b1111111100000000)) > max) {
+        // Upper half
+        max = __popcnt16(~(convolution ^ 0b1111111100000000));
+        symbol = "▀";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b1111111111110000)) > max) {
+        // Upper three quarters
+        max = __popcnt16(~(convolution ^ 0b1111111111110000));
+        symbol = "▂";
+        needSwap = true;
+    }
+    if (__popcnt16(~(convolution ^ 0b000000001111)) > max) {
+        max = __popcnt16(~(convolution ^ 0b000000001111));
+        symbol = "▂";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b000000000000)) > max) {
+        max = __popcnt16(~(convolution ^ 0b000000000000));
+        symbol = SPACE;
+        needSwap = false;
+    }
+    return std::make_pair(symbol, needSwap);
 }
 
 inline const char *colorToText(const uint8_t color) {

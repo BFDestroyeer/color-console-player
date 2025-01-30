@@ -33,45 +33,6 @@ inline std::pair<cv::Vec3b, cv::Vec3b> getColors(const cv::Vec3s &ul, const cv::
     return result;
 }
 
-inline const char *symbolByConvolution(const uint8_t convolution) {
-    switch (convolution) {
-    case 0b0000:
-        return SPACE;
-    case 0b1000:
-        return "▘";
-    case 0b0100:
-        return "▝";
-    case 0b0010:
-        return "▖";
-    case 0b0001:
-        return "▗";
-    case 0b1100:
-        return "▀";
-    case 0b0011:
-        return "▄";
-    case 0b1010:
-        return "▌";
-    case 0b0101:
-        return "▐";
-    case 0b1001:
-        return "▚";
-    case 0b0110:
-        return "▞";
-    case 0b0111:
-        return "▟";
-    case 0b1011:
-        return "▙";
-    case 0b1101:
-        return "▜";
-    case 0b1110:
-        return "▛";
-    case 0b1111:
-        return "█";
-    default:
-        return SPACE;
-    }
-}
-
 inline std::pair<const char*, boolean> symbolByConvolutionFull(const uint16_t convolution, const int32_t foregroundClusterSize, const int32_t backgroundClusterSize) {
     if (foregroundClusterSize == 0) {
         return std::make_pair("█", true);
@@ -237,8 +198,8 @@ inline std::pair<const char*, boolean> symbolByConvolutionFull(const uint16_t co
     if (__popcnt16(convolution ^ 0b000000000000) < min) {
         // Empty block
         min = __popcnt16(convolution ^ 0b000000000000);
-        symbol = SPACE;
-        needSwap = false;
+        symbol = "█";
+        needSwap = true;
     }
     return std::make_pair(symbol, needSwap);
 }

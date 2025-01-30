@@ -29,6 +29,7 @@ uint16_t getColor(const cv::Vec3s &foreground, const cv::Vec3s &background, cons
 }
 
 void imageToTextFull(const cv::Mat &image, const uint64_t horizontalOffset, uint8_t *buffer) {
+#pragma omp parallel for num_threads(4)
     for (int32_t y = 0; y < image.rows; y += 4) {
         for (int32_t x = 0; x < image.cols; x += 4) {
 
@@ -266,7 +267,9 @@ int main(int argc, char *argv[]) {
                   << "Frame time: "
                   << std::format("{:10.3f}",
                                  std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
-                  << "ms";
+                  << "ms "
+                  << "Window size: "
+                    << std::format("{:4d} {:4d}", symbolWidth, symbolHeight);
     }
     std::remove(TEMP_AUDIO_FILE_PATH);
     return EXIT_SUCCESS;

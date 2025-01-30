@@ -29,13 +29,29 @@ uint16_t getColor(const cv::Vec3s &foreground, const cv::Vec3s &background, cons
 }
 
 void imageToTextFull(const cv::Mat &image, const uint64_t horizontalOffset, uint8_t *buffer) {
-    auto colorBuffer = new const cv::Vec3b*[16];
-
     for (int32_t y = 0; y < image.rows; y += 4) {
         for (int32_t x = 0; x < image.cols; x += 4) {
 
-            auto& firstForeground = image.at<cv::Vec3b>(y, x);
-            auto& firstBackground = image.at<cv::Vec3b>(y + 3, x + 3);
+            auto firstForeground = image.at<cv::Vec3b>(y, x);
+            auto firstBackground = image.at<cv::Vec3b>(y + 3, x + 3);
+
+            double maxNorm = DBL_MAX;
+            double minNorm = DBL_MIN;
+            for (int32_t localY = 0; localY < 4; localY++) {
+                for (int32_t localX = 0; localX < 4; localX++) {
+                    auto &color = image.at<cv::Vec3b>(y + localY, x + localX);
+                    const auto
+                    colorNorm = cv::norm(color);
+                    if (colorNorm > maxNorm) {
+                        maxNorm = colorNorm;
+                        firstForeground = color;
+                    }
+                    if (colorNorm < minNorm) {
+                        minNorm = colorNorm;
+                        firstBackground = color;
+                    }
+                }
+            }
 
             auto secondForeground = cv::Vec3s(0, 0, 0);
             auto secondBackground = cv::Vec3s(0, 0, 0);
@@ -61,12 +77,12 @@ void imageToTextFull(const cv::Mat &image, const uint64_t horizontalOffset, uint
             uint16_t convolutionFull = 0x0;
             for (int32_t localY = 0; localY < 4; localY++) {
                 for (int32_t localX = 0; localX < 4; localX++) {
-                    const int32_t index = y * image.cols + localX;
+                    const int32_t index = localY * 4 + localX;
                     convolutionFull += getColor(secondForeground, secondBackground, image.at<cv::Vec3b>(y + localY, x + localX)) << index;
                 }
             }
 
-            auto [symbol, needSwap] = symbolByConvolutionFull(convolutionFull);
+            auto [symbol, needSwap] = symbolByConvolutionFull(convolutionFull, foregroundClusterSize, backgroundClusterSize);
             if (needSwap) {
                 std::swap(secondForeground, secondBackground);
             }
@@ -123,11 +139,6 @@ void imageToTextFull(const cv::Mat &image, const uint64_t horizontalOffset, uint
     }
 }
 
-void exitSignalHandler(int) {
-    std::remove(TEMP_AUDIO_FILE_PATH);
-    std::exit(EXIT_SUCCESS);
-}
-
 // 16 x 33 font size
 // 236 x 63 symbol resolution
 // 3776 x 2079 effective resolution
@@ -159,9 +170,6 @@ int main(int argc, char *argv[]) {
     int32_t previousColumns = -1;
     int32_t previousRows = -1;
     uint8_t *buffer = nullptr;
-
-    signal(SIGINT, exitSignalHandler);
-    signal(SIGTERM, exitSignalHandler);
 
 #ifdef _WIN32
     auto executableDir = std::filesystem::path(argv[0]).parent_path();

@@ -77,36 +77,158 @@ inline std::pair<const char*, boolean> symbolByConvolutionFull(const uint16_t co
     const char* symbol = SPACE;
     bool needSwap = false;
     //(3,3)(3,2)(3,1)(3,0)(2,3)(2,2)(2,1)(2,0)(1,3)(1,2)(1,1)(1,0)
+
+    // Quadrants
+    if (__popcnt16(~(convolution ^ 0b0011001100000000)) > max) {
+        // QUADRANT LOWER LEFT
+        max = __popcnt16(~(convolution ^ 0b0011001100000000));
+        symbol = "▖";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b1100110000000000)) > max) {
+        // QUADRANT LOWER RIGHT
+        max = __popcnt16(~(convolution ^ 0b1100110000000000));
+        symbol = "▗";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b0000000000110011)) > max) {
+        // QUADRANT UPPER LEFT
+        max = __popcnt16(~(convolution ^ 0b0000000000110011));
+        symbol = "▘";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b0000000011001100)) > max) {
+        // QUADRANT UPPER RIGHT
+        max = __popcnt16(~(convolution ^ 0b0000000011001100));
+        symbol = "▝";
+        needSwap = false;
+    }
+
+    // Diagonal quadrants
+    if (__popcnt16(~(convolution ^ 0b1100110000110011)) > max) {
+        // QUADRANT UPPER LEFT AND LOWER RIGHT
+        max = __popcnt16(~(convolution ^ 0b1100110000110011));
+        symbol = "▚";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b0011001100110011)) > max) {
+        // QUADRANT UPPER RIGHT AND LOWER LEFT
+        max = __popcnt16(~(convolution ^ 0b0011001100110011));
+        symbol = "▞";
+        needSwap = false;
+    }
+
+    // Tri block quadrants
+    if (__popcnt16(~(convolution ^ 0b1111111100110011)) > max) {
+        // QUADRANT UPPER LEFT AND LOWER LEFT AND LOWER RIGHT
+        max = __popcnt16(~(convolution ^ 0b1111111100110011));
+        symbol = "▙";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b0011001111111111)) > max) {
+        // QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER LEFT
+        max = __popcnt16(~(convolution ^ 0b0011001111111111));
+        symbol = "▛";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b1100110011111111)) > max) {
+        // QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER RIGHT
+        max = __popcnt16(~(convolution ^ 0b1100110011111111));
+        symbol = "▜";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b1111111111001100)) > max) {
+        // QUADRANT UPPER RIGHT AND LOWER LEFT AND LOWER RIGHT
+        max = __popcnt16(~(convolution ^ 0b1111111111001100));
+        symbol = "▟";
+        needSwap = false;
+    }
+
+    // Horizontal
+    if (__popcnt16(~(convolution ^ 0b0001000100010001)) > max) {
+        // Left quarter
+        max = __popcnt16(~(convolution ^ 0b0001000100010001));
+        symbol = "▎";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b0011001100110011)) > max) {
+        // Left half
+        max = __popcnt16(~(convolution ^ 0b0011001100110011));
+        symbol = "▌";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b0111011101110111)) > max) {
+        // Left three quarters
+        max = __popcnt16(~(convolution ^ 0b0111011101110111));
+        symbol = "▊";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b1110111011101110)) > max) {
+        // Right three quarters
+        max = __popcnt16(~(convolution ^ 0b1110111011101110));
+        symbol = "▎";
+        needSwap = true;
+    }
+    if (__popcnt16(~(convolution ^ 0b1100110011001100)) > max) {
+        // Right half
+        max = __popcnt16(~(convolution ^ 0b1100110011001100));
+        symbol = "▐";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b1000100010001000)) > max) {
+        // Right quarter
+        max = __popcnt16(~(convolution ^ 0b1000100010001000));
+        symbol = "▊";
+        needSwap = true;
+    }
+
+    // Vertical
+    if (__popcnt16(~(convolution ^ 0b0000000000001111)) > max) {
+        // Upper quarter
+        max = __popcnt16(~(convolution ^ 0b0000000000001111));
+        symbol = "▆";
+        needSwap = true;
+    }
+    if (__popcnt16(~(convolution ^ 0b0000000011111111)) > max) {
+        // Upper half
+        max = __popcnt16(~(convolution ^ 0b0000000011111111));
+        symbol = "▀";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b0000111111111111)) > max) {
+        // Upper three quarters
+        max = __popcnt16(~(convolution ^ 0b0000111111111111));
+        symbol = "▂";
+        needSwap = true;
+    }
+    if (__popcnt16(~(convolution ^ 0b1111111111110000)) > max) {
+        // Lower three quarters
+        max = __popcnt16(~(convolution ^ 0b1111111111110000));
+        symbol = "▆";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b1111111100000000)) > max) {
+        // Lower half
+        max = __popcnt16(~(convolution ^ 0b1111111100000000));
+        symbol = "▄";
+        needSwap = false;
+    }
+    if (__popcnt16(~(convolution ^ 0b1111000000000000)) > max) {
+        // Lower quarter
+        max = __popcnt16(~(convolution ^ 0b1111000000000000));
+        symbol = "▂";
+        needSwap = false;
+    }
+
+    // Full
     if (__popcnt16(~(convolution ^ 0b1111111111111111)) > max) {
         // Full block
         max = __popcnt16(~(convolution ^ 0b1111111111111111));
         symbol = "█";
         needSwap = false;
     }
-    if (__popcnt16(~(convolution ^ 0b1111000000000000)) > max) {
-        // Upper quarter
-        max = __popcnt16(~(convolution ^ 0b1111000000000000));
-        symbol = "▆";
-        needSwap = true;
-    }
-    if (__popcnt16(~(convolution ^ 0b1111111100000000)) > max) {
-        // Upper half
-        max = __popcnt16(~(convolution ^ 0b1111111100000000));
-        symbol = "▀";
-        needSwap = false;
-    }
-    if (__popcnt16(~(convolution ^ 0b1111111111110000)) > max) {
-        // Upper three quarters
-        max = __popcnt16(~(convolution ^ 0b1111111111110000));
-        symbol = "▂";
-        needSwap = true;
-    }
-    if (__popcnt16(~(convolution ^ 0b000000001111)) > max) {
-        max = __popcnt16(~(convolution ^ 0b000000001111));
-        symbol = "▂";
-        needSwap = false;
-    }
     if (__popcnt16(~(convolution ^ 0b000000000000)) > max) {
+        // Empty block
         max = __popcnt16(~(convolution ^ 0b000000000000));
         symbol = SPACE;
         needSwap = false;

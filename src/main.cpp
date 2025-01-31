@@ -433,7 +433,7 @@ int main(int argc, char* argv[]) {
         cv::resize(frame, frame, cv::Size(symbolWidth * 4, symbolHeight * 4));
 
         int32_t differentialRealSize = differentialBufferSize;
-        bool needFullRedraw = previousFrame.empty() || (differentialCount > fullRedrawFrequency && fullRedrawFrequency >= 0);
+        bool needFullRedraw = previousFrame.empty() || (differentialCount >= fullRedrawFrequency && fullRedrawFrequency >= 0);
         needFullRedraw ? differentialCount = 0 : differentialCount++;
         if (needFullRedraw) {
             imageToTextFull(frame, (columns - symbolWidth) / 2, buffer);

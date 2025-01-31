@@ -12,6 +12,8 @@
 #include <unistd.h>
 #endif __unix__
 
+#include "ThreadedVideoCapture.hpp"
+
 #include <opencv2/opencv.hpp>
 
 #include "color.hpp"
@@ -339,6 +341,7 @@ int main(int argc, char* argv[]) {
     auto redrawOffset = std::stod(argv[3]);
 
     auto capture = cv::VideoCapture(argv[1]);
+    auto bufferedVideoCapture = ThreadedVideoCapture(capture);
     const auto frameRate = capture.get(cv::CAP_PROP_FPS);
     const auto frameDuration = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / frameRate));
 
@@ -386,11 +389,12 @@ int main(int argc, char* argv[]) {
         const int32_t rows = windowSize.ws_row - 1;
 #endif __unix__
 
-        if (!capture.read(frame)) {
+        double capturePosition;
+        if (!bufferedVideoCapture.read(frame, capturePosition)) {
             break;
         }
         const auto framePosition =
-            std::chrono::duration<int64_t, std::ratio<1, 1000000000>>(static_cast<int64_t>(capture.get(cv::CAP_PROP_POS_MSEC) * 1e6));
+            std::chrono::duration<int64_t, std::ratio<1, 1000000000>>(static_cast<int64_t>(capturePosition * 1e6));
         if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration) {
             continue;
         }

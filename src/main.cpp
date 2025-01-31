@@ -203,6 +203,9 @@ int main(int argc, char* argv[]) {
     auto executableDir = std::filesystem::path(argv[0]).parent_path();
     _popen(std::format("{}\\ffplay.exe \"{}\" -nodisp -autoexit -loglevel quiet", executableDir.string(), argv[1]).c_str(), "r");
 #endif _WIN32
+#ifdef __unix__
+    popen(std::format("ffplay \"{}\" -nodisp -autoexit -loglevel quiet", argv[1]).c_str(), "r");
+#endif
 
     std::cout << "\x1b[2J";
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();

@@ -1,8 +1,7 @@
 #pragma once
 
-constexpr char SPACE[] = {0x1, 0x1, 0x20, 0x0};
 
-inline std::pair<const char *, boolean> symbolByConvolutionFull(
+inline std::pair<const char *, bool> symbolByConvolutionFull(
     const uint16_t convolution,
     const int32_t foregroundClusterSize,
     const int32_t backgroundClusterSize) {
@@ -14,162 +13,162 @@ inline std::pair<const char *, boolean> symbolByConvolutionFull(
     }
 
     int32_t min = 64;
-    const char *symbol = SPACE;
-    bool needSwap = false;
+    auto symbol = "█";
+    auto needSwap = true;
     //(3,3)(3,2)(3,1)(3,0)(2,3)(2,2)(2,1)(2,0)(1,3)(1,2)(1,1)(1,0)
 
     // Quadrants
-    if (__popcnt16(convolution ^ 0b0011001100000000) < min) {
+    if (std::popcount(convolution ^ 0b0011001100000000u) < min) {
         // QUADRANT LOWER LEFT
-        min = __popcnt16(convolution ^ 0b0011001100000000);
+        min = std::popcount(convolution ^ 0b0011001100000000u);
         symbol = "▖";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b1100110000000000) < min) {
+    if (std::popcount(convolution ^ 0b1100110000000000u) < min) {
         // QUADRANT LOWER RIGHT
-        min = __popcnt16(convolution ^ 0b1100110000000000);
+        min = std::popcount(convolution ^ 0b1100110000000000u);
         symbol = "▗";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b0000000000110011) < min) {
+    if (std::popcount(convolution ^ 0b0000000000110011u) < min) {
         // QUADRANT UPPER LEFT
-        min = __popcnt16(convolution ^ 0b0000000000110011);
+        min = std::popcount(convolution ^ 0b0000000000110011u);
         symbol = "▘";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b0000000011001100) < min) {
+    if (std::popcount(convolution ^ 0b0000000011001100u) < min) {
         // QUADRANT UPPER RIGHT
-        min = __popcnt16(convolution ^ 0b0000000011001100);
+        min = std::popcount(convolution ^ 0b0000000011001100u);
         symbol = "▝";
         needSwap = false;
     }
 
     // Diagonal quadrants
-    if (__popcnt16(convolution ^ 0b1100110000110011) < min) {
+    if (std::popcount(convolution ^ 0b1100110000110011u) < min) {
         // QUADRANT UPPER LEFT AND LOWER RIGHT
-        min = __popcnt16(convolution ^ 0b1100110000110011);
+        min = std::popcount(convolution ^ 0b1100110000110011u);
         symbol = "▚";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b0011001100110011) < min) {
+    if (std::popcount(convolution ^ 0b0011001100110011u) < min) {
         // QUADRANT UPPER RIGHT AND LOWER LEFT
-        min = __popcnt16(convolution ^ 0b0011001100110011);
+        min = std::popcount(convolution ^ 0b0011001100110011u);
         symbol = "▞";
         needSwap = false;
     }
 
     // Tri block quadrants
-    if (__popcnt16(convolution ^ 0b1111111100110011) < min) {
+    if (std::popcount(convolution ^ 0b1111111100110011u) < min) {
         // QUADRANT UPPER LEFT AND LOWER LEFT AND LOWER RIGHT
-        min = __popcnt16(convolution ^ 0b1111111100110011);
+        min = std::popcount(convolution ^ 0b1111111100110011u);
         symbol = "▙";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b0011001111111111) < min) {
+    if (std::popcount(convolution ^ 0b0011001111111111u) < min) {
         // QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER LEFT
-        min = __popcnt16(convolution ^ 0b0011001111111111);
+        min = std::popcount(convolution ^ 0b0011001111111111u);
         symbol = "▛";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b1100110011111111) < min) {
+    if (std::popcount(convolution ^ 0b1100110011111111u) < min) {
         // QUADRANT UPPER LEFT AND UPPER RIGHT AND LOWER RIGHT
-        min = __popcnt16(convolution ^ 0b1100110011111111);
+        min = std::popcount(convolution ^ 0b1100110011111111u);
         symbol = "▜";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b1111111111001100) < min) {
+    if (std::popcount(convolution ^ 0b1111111111001100u) < min) {
         // QUADRANT UPPER RIGHT AND LOWER LEFT AND LOWER RIGHT
-        min = __popcnt16(convolution ^ 0b1111111111001100);
+        min = std::popcount(convolution ^ 0b1111111111001100u);
         symbol = "▟";
         needSwap = false;
     }
 
     // Horizontal
-    if (__popcnt16(convolution ^ 0b0001000100010001) < min) {
+    if (std::popcount(convolution ^ 0b0001000100010001u) < min) {
         // Left quarter
-        min = __popcnt16(convolution ^ 0b0001000100010001);
+        min = std::popcount(convolution ^ 0b0001000100010001u);
         symbol = "▎";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b0011001100110011) < min) {
+    if (std::popcount(convolution ^ 0b0011001100110011u) < min) {
         // Left half
-        min = __popcnt16(convolution ^ 0b0011001100110011);
+        min = std::popcount(convolution ^ 0b0011001100110011u);
         symbol = "▌";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b0111011101110111) < min) {
+    if (std::popcount(convolution ^ 0b0111011101110111u) < min) {
         // Left three quarters
-        min = __popcnt16(convolution ^ 0b0111011101110111);
+        min = std::popcount(convolution ^ 0b0111011101110111u);
         symbol = "▊";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b1110111011101110) < min) {
+    if (std::popcount(convolution ^ 0b1110111011101110u) < min) {
         // Right three quarters
-        min = __popcnt16(convolution ^ 0b1110111011101110);
+        min = std::popcount(convolution ^ 0b1110111011101110u);
         symbol = "▎";
         needSwap = true;
     }
-    if (__popcnt16(convolution ^ 0b1100110011001100) < min) {
+    if (std::popcount(convolution ^ 0b1100110011001100u) < min) {
         // Right half
-        min = __popcnt16(convolution ^ 0b1100110011001100);
+        min = std::popcount(convolution ^ 0b1100110011001100u);
         symbol = "▐";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b1000100010001000) < min) {
+    if (std::popcount(convolution ^ 0b1000100010001000u) < min) {
         // Right quarter
-        min = __popcnt16(convolution ^ 0b1000100010001000);
+        min = std::popcount(convolution ^ 0b1000100010001000u);
         symbol = "▊";
         needSwap = true;
     }
 
     // Vertical
-    if (__popcnt16(convolution ^ 0b0000000000001111) < min) {
+    if (std::popcount(convolution ^ 0b0000000000001111u) < min) {
         // Upper quarter
-        min = __popcnt16(convolution ^ 0b0000000000001111);
+        min = std::popcount(convolution ^ 0b0000000000001111u);
         symbol = "▆";
         needSwap = true;
     }
-    if (__popcnt16(convolution ^ 0b0000000011111111) < min) {
+    if (std::popcount(convolution ^ 0b0000000011111111u) < min) {
         // Upper half
-        min = __popcnt16(convolution ^ 0b0000000011111111);
+        min = std::popcount(convolution ^ 0b0000000011111111u);
         symbol = "▀";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b0000111111111111) < min) {
+    if (std::popcount(convolution ^ 0b0000111111111111u) < min) {
         // Upper three quarters
-        min = __popcnt16(convolution ^ 0b0000111111111111);
+        min = std::popcount(convolution ^ 0b0000111111111111u);
         symbol = "▂";
         needSwap = true;
     }
-    if (__popcnt16(convolution ^ 0b1111111111110000) < min) {
+    if (std::popcount(convolution ^ 0b1111111111110000u) < min) {
         // Lower three quarters
-        min = __popcnt16(convolution ^ 0b1111111111110000);
+        min = std::popcount(convolution ^ 0b1111111111110000u);
         symbol = "▆";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b1111111100000000) < min) {
+    if (std::popcount(convolution ^ 0b1111111100000000u) < min) {
         // Lower half
-        min = __popcnt16(convolution ^ 0b1111111100000000);
+        min = std::popcount(convolution ^ 0b1111111100000000u);
         symbol = "▄";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b1111000000000000) < min) {
+    if (std::popcount(convolution ^ 0b1111000000000000u) < min) {
         // Lower quarter
-        min = __popcnt16(convolution ^ 0b1111000000000000);
+        min = std::popcount(convolution ^ 0b1111000000000000u);
         symbol = "▂";
         needSwap = false;
     }
 
     // Full
-    if (__popcnt16(convolution ^ 0b1111111111111111) < min) {
+    if (std::popcount(convolution ^ 0b1111111111111111u) < min) {
         // Full block
-        min = __popcnt16(convolution ^ 0b1111111111111111);
+        min = std::popcount(convolution ^ 0b1111111111111111u);
         symbol = "█";
         needSwap = false;
     }
-    if (__popcnt16(convolution ^ 0b000000000000) < min) {
+    if (std::popcount(convolution ^ 0b000000000000u) < min) {
         // Empty block
-        min = __popcnt16(convolution ^ 0b000000000000);
+        min = std::popcount(convolution ^ 0b000000000000u);
         symbol = "█";
         needSwap = true;
     }

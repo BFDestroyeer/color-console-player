@@ -246,7 +246,7 @@ int32_t imageToTextDifferential(const cv::Mat& image, const cv::Mat& previousIma
                 );
             std::memcpy(
                 buffer + bufferPosition + 2,
-                std::format("{}", y / 4 + 1).c_str(),
+                std::format("{:03d}", y / 4 + 1).c_str(),
                 3);
             std::memcpy(
                 buffer + bufferPosition + 5,
@@ -254,7 +254,7 @@ int32_t imageToTextDifferential(const cv::Mat& image, const cv::Mat& previousIma
                 3);
             std::memcpy(
                 buffer + bufferPosition + 6,
-                std::format("{}", (x / 4 + horizontalOffset + 1)).c_str(),
+                std::format("{:03d}", (x / 4 + horizontalOffset + 1)).c_str(),
                 3);
             std::memcpy(
                 buffer + bufferPosition + 9,
@@ -424,7 +424,7 @@ int main(int argc, char* argv[]) {
             std::system("cls");
 #endif _WIN32
 #ifdef __unix__
-            std::system("clear")
+            std::cout << "x1b[2J";
 #endif __unix__
         }
         previousColumns = columns;
@@ -453,7 +453,12 @@ int main(int argc, char* argv[]) {
 #endif _WIN32
 #ifdef __unix__
         std::cout << "\x1b[0;0H";
-        std::fwrite(buffer, bufferSize, 1, stdout);
+        if (needFullRedraw) {
+            std::fwrite(buffer, bufferSize, 1, stdout);
+        } else {
+            std::fwrite(differentialBuffer, differentialRealSize, 1, stdout);
+        }
+
         std::fflush(stdout);
 #endif __unix__
         auto endPrintingTime = std::chrono::high_resolution_clock::now();

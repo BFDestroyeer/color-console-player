@@ -328,14 +328,14 @@ int32_t imageToTextDifferential(const cv::Mat& image, const cv::Mat& previousIma
 // 3776 x 2079 effective resolution
 int main(int argc, char* argv[]) {
     if (argc != 4) {
-        std::cout << "Usage: " << argv[0] << " <path to file> <redraw frequency> <redraw offset>" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <path to file> <full redraw frequency> <symbol redraw offset>" << std::endl;
         return EXIT_FAILURE;
     }
     if (!std::filesystem::exists(argv[1])) {
         std::cout << "File " << argv[1] << " does not exist" << std::endl;
         return EXIT_FAILURE;
     }
-    auto redrawFrequency = std::stoi(argv[2]);
+    auto fullRedrawFrequency = std::stoi(argv[2]);
     auto redrawOffset = std::stod(argv[3]);
 
     auto capture = cv::VideoCapture(argv[1]);
@@ -419,6 +419,7 @@ int main(int argc, char* argv[]) {
             buffer[bufferSize - 1] = 0x0;
             differentialBuffer[differentialBufferSize - 1] = 0x0;
             previousFrame = cv::Mat();
+            differentialCount = 0;
 #ifdef _WIN32
             std::system("cls");
 #endif _WIN32
@@ -432,7 +433,9 @@ int main(int argc, char* argv[]) {
         cv::resize(frame, frame, cv::Size(symbolWidth * 4, symbolHeight * 4));
 
         int32_t differentialRealSize = differentialBufferSize;
-        if (previousFrame.empty()) {
+        bool needFullRedraw = previousFrame.empty() || (differentialCount > fullRedrawFrequency && fullRedrawFrequency >= 0);
+        needFullRedraw ? differentialCount = 0 : differentialCount++;
+        if (needFullRedraw) {
             imageToTextFull(frame, (columns - symbolWidth) / 2, buffer);
         } else {
             differentialRealSize = imageToTextDifferential(frame, previousFrame, (columns - symbolWidth) / 2, differentialBuffer, redrawOffset);
@@ -442,12 +445,11 @@ int main(int argc, char* argv[]) {
         auto beginPrintingTime = std::chrono::high_resolution_clock::now();
 #ifdef _WIN32
         SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), {0, 0});
-        if (previousFrame.empty()) {
+        if (needFullRedraw) {
             WriteConsoleA(consoleOutput, buffer, bufferSize, &ret, nullptr);
         } else {
             WriteConsoleA(consoleOutput, differentialBuffer, differentialRealSize, &ret, nullptr);
         }
-        differentialCount += 1;
 #endif _WIN32
 #ifdef __unix__
         std::cout << "\x1b[0;0H";

@@ -18,5 +18,10 @@ if (OPENMP_FOUND)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif ()
 
-add_executable(color_console_player main.cpp color.hpp)
+include_directories("include")
+
+file(GLOB_RECURSE TARGET_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp)
+file(GLOB_RECURSE TARGET_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+
+add_executable(color_console_player ${TARGET_HEADERS} ${TARGET_SOURCES})
 target_link_libraries(color_console_player ${OpenCV_LIBS})

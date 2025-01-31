@@ -1,39 +1,11 @@
 #pragma once
 
-#include <opencv2/opencv.hpp>
-
 constexpr char SPACE[] = {0x1, 0x1, 0x20, 0x0};
 
-inline std::pair<cv::Vec3b, cv::Vec3b> getColors(const cv::Vec3s &ul, const cv::Vec3s &ur, const cv::Vec3s &bl, const cv::Vec3s &br) {
-    double max = -1.0;
-    std::pair<cv::Vec3b, cv::Vec3b> result;
-    if (cv::norm(ul - ur) > max) {
-        max = cv::norm(ul - ur);
-        result = std::make_pair(ul, ur);
-    }
-    if (cv::norm(ul - bl) > max) {
-        max = cv::norm(ul - bl);
-        result = std::make_pair(ul, bl);
-    }
-    if (cv::norm(ul - br) > max) {
-        max = cv::norm(ul - br);
-        result = std::make_pair(ul, br);
-    }
-    if (cv::norm(ur - bl) > max) {
-        max = cv::norm(ur - bl);
-        result = std::make_pair(ur, bl);
-    }
-    if (cv::norm(ur - br) > max) {
-        max = cv::norm(ur - br);
-        result = std::make_pair(ur, br);
-    }
-    if (cv::norm(bl - br) > max) {
-        result = std::make_pair(bl, br);
-    }
-    return result;
-}
-
-inline std::pair<const char*, boolean> symbolByConvolutionFull(const uint16_t convolution, const int32_t foregroundClusterSize, const int32_t backgroundClusterSize) {
+inline std::pair<const char *, boolean> symbolByConvolutionFull(
+    const uint16_t convolution,
+    const int32_t foregroundClusterSize,
+    const int32_t backgroundClusterSize) {
     if (foregroundClusterSize == 0) {
         return std::make_pair("█", true);
     }
@@ -42,7 +14,7 @@ inline std::pair<const char*, boolean> symbolByConvolutionFull(const uint16_t co
     }
 
     int32_t min = 64;
-    const char* symbol = SPACE;
+    const char *symbol = SPACE;
     bool needSwap = false;
     //(3,3)(3,2)(3,1)(3,0)(2,3)(2,2)(2,1)(2,0)(1,3)(1,2)(1,1)(1,0)
 

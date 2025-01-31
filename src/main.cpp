@@ -1,6 +1,6 @@
 #include <csignal>
+#include <cstdio>
 #include <filesystem>
-#include <stdio.h>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -19,16 +19,15 @@
 #pragma comment(lib, "winmm.lib")
 
 constexpr auto FULL_SYMBOL_SIZE = 41;
-constexpr char TEMP_AUDIO_FILE_PATH[] = "~temp_audio.wav";
 
-uint16_t getColor(const cv::Vec3s &foreground, const cv::Vec3s &background, const cv::Vec3s &color) {
-    if (cv::norm(foreground - color) < cv::norm(background - color)) {
+uint16_t getColor(const cv::Vec3s& foreground, const cv::Vec3s& background, const cv::Vec3s& color) {
+    if (cv::norm(foreground - color, cv::NORM_L2SQR) < cv::norm(background - color, cv::NORM_L2SQR)) {
         return 1;
     }
     return 0;
 }
 
-void imageToTextFull(const cv::Mat &image, const uint64_t horizontalOffset, uint8_t *buffer) {
+void imageToTextFull(const cv::Mat& image, const uint64_t horizontalOffset, uint8_t* buffer) {
 #pragma omp parallel for num_threads(4)
     for (int32_t y = 0; y < image.rows; y += 4) {
         for (int32_t x = 0; x < image.cols; x += 4) {
@@ -40,9 +39,8 @@ void imageToTextFull(const cv::Mat &image, const uint64_t horizontalOffset, uint
             double minNorm = DBL_MIN;
             for (int32_t localY = 0; localY < 4; localY++) {
                 for (int32_t localX = 0; localX < 4; localX++) {
-                    auto &color = image.at<cv::Vec3b>(y + localY, x + localX);
-                    const auto
-                    colorNorm = cv::norm(color);
+                    auto& color = image.at<cv::Vec3b>(y + localY, x + localX);
+                    const auto colorNorm = cv::norm(color, cv::NORM_L2SQR);
                     if (colorNorm > maxNorm) {
                         maxNorm = colorNorm;
                         firstForeground = color;
@@ -74,7 +72,6 @@ void imageToTextFull(const cv::Mat &image, const uint64_t horizontalOffset, uint
             secondForeground *= 1.0 / foregroundClusterSize;
             secondBackground *= 1.0 / backgroundClusterSize;
 
-
             uint16_t convolutionFull = 0x0;
             for (int32_t localY = 0; localY < 4; localY++) {
                 for (int32_t localX = 0; localX < 4; localX++) {
@@ -89,61 +86,91 @@ void imageToTextFull(const cv::Mat &image, const uint64_t horizontalOffset, uint
             }
 
             // \x1b[38;2;<R>;<G>;<B>m\x1b[48;2;<R>;<G>;<B>m<SYMBOL>
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE,
-                        "\x1b[38;2;", 7);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 7,
-                        colorToText(secondForeground[2]), 3);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 10,
-                        ";", 1);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 11,
-                        colorToText(secondForeground[1]), 3);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 14,
-                        ";", 1);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 15,
-                        colorToText(secondForeground[0]), 3);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 18,
-                        "m\x1b[48;2;", 8);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 26,
-                        colorToText(secondBackground[2]), 3);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 29,
-                        ";", 1);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 30,
-                        colorToText(secondBackground[1]), 3);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 33,
-                        ";", 1);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 34,
-                        colorToText(secondBackground[0]), 3);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 37,
-                        "m", 1);
-            std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                            (x / 4) * FULL_SYMBOL_SIZE + 38,
-                        symbol, 3);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE,
+                "\x1b[38;2;",
+                7);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 7,
+                colorToText(secondForeground[2]),
+                3);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 10,
+                ";",
+                1);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 11,
+                colorToText(secondForeground[1]),
+                3);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 14,
+                ";",
+                1);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 15,
+                colorToText(secondForeground[0]),
+                3);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 18,
+                "m\x1b[48;2;",
+                8);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 26,
+                colorToText(secondBackground[2]),
+                3);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 29,
+                ";",
+                1);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 30,
+                colorToText(secondBackground[1]),
+                3);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 33,
+                ";",
+                1);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 34,
+                colorToText(secondBackground[0]),
+                3);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 37,
+                "m",
+                1);
+            std::memcpy(
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                    (x / 4) * FULL_SYMBOL_SIZE + 38,
+                symbol,
+                3);
         }
 
         // Reset color mode and end line
-        std::memcpy(buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                        (image.cols / 4) * FULL_SYMBOL_SIZE,
-                    "\x1b[0;0m\n", 7);
+        std::memcpy(
+            buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
+                (image.cols / 4) * FULL_SYMBOL_SIZE,
+            "\x1b[0;0m\n",
+            7);
     }
 }
 
 // 16 x 33 font size
 // 236 x 63 symbol resolution
 // 3776 x 2079 effective resolution
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     if (argc != 2) {
         std::cout << "Usage: " << argv[0] << " <path to file>" << std::endl;
         return EXIT_FAILURE;
@@ -170,7 +197,7 @@ int main(int argc, char *argv[]) {
 
     int32_t previousColumns = -1;
     int32_t previousRows = -1;
-    uint8_t *buffer = nullptr;
+    uint8_t* buffer = nullptr;
 
 #ifdef _WIN32
     auto executableDir = std::filesystem::path(argv[0]).parent_path();
@@ -222,12 +249,7 @@ int main(int argc, char *argv[]) {
             buffer = new uint8_t[bufferSize];
             std::memset(buffer, ' ', bufferSize - 1);
             buffer[bufferSize - 1] = 0x0;
-#ifdef _WIN32
-            std::system("cls");
-#endif _WIN32
-#ifdef __unix__
-            std::system("clear");
-#endif __unix__
+            std::cout << "\x1b[2J";
         }
         previousColumns = columns;
         previousRows = rows;
@@ -256,21 +278,18 @@ int main(int argc, char *argv[]) {
         auto endFrameTime = std::chrono::high_resolution_clock::now();
 
         std::cout << "\x1b[0;0m";
-        std::cout << "Render time: "
-                  << std::format("{:10.3f}",
-                                 std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginFrameTime).count() / 1e6)
-                  << "ms "
-                  << " Printing time: "
-                  << std::format("{:10.3f}",
-                                 std::chrono::duration_cast<std::chrono::nanoseconds>(endPrintingTime - beginPrintingTime).count() / 1e6)
-                  << "ms "
-                  << "Frame time: "
-                  << std::format("{:10.3f}",
-                                 std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
-                  << "ms "
-                  << "Window size: "
-                    << std::format("{:4d} {:4d}", symbolWidth, symbolHeight);
+        std::cout
+            << "Render time: "
+            << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginFrameTime).count() / 1e6)
+            << "ms "
+            << " Printing time: "
+            << std::format(
+                   "{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endPrintingTime - beginPrintingTime).count() / 1e6)
+            << "ms "
+            << "Frame time: "
+            << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
+            << "ms "
+            << "Window size: " << std::format("{:4d} {:4d}", symbolWidth, symbolHeight);
     }
-    std::remove(TEMP_AUDIO_FILE_PATH);
     return EXIT_SUCCESS;
 }

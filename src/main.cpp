@@ -12,6 +12,7 @@
 #include <unistd.h>
 #endif __unix__
 
+#include "BufferedRandomGenerator.hpp"
 #include "ThreadedVideoCapture.hpp"
 
 #include <opencv2/opencv.hpp>
@@ -170,21 +171,29 @@ void imageToTextFull(const cv::Mat& image, const uint64_t horizontalOffset, uint
     }
 }
 
-int32_t imageToTextDifferential(const cv::Mat& image, const cv::Mat& previousImage, const uint64_t horizontalOffset, uint8_t* buffer, double redrawOffset) {
+int32_t imageToTextDifferential(
+    const cv::Mat& image,
+    const cv::Mat& previousImage,
+    const uint64_t horizontalOffset,
+    uint8_t* buffer,
+    const float redrawOffset,
+    const float minimalRedrawPercentage) {
     int32_t bufferPosition = 0;
     auto imageDifference = cv::Mat();
     cv::absdiff(image, previousImage, imageDifference);
     for (int32_t y = 0; y < image.rows; y += 4) {
         for (int32_t x = 0; x < image.cols; x += 4) {
 
-            auto localDifference = cv::Vec3s(0, 0, 0);
-            for (int32_t localY = 0; localY < 4; localY++) {
-                for (int32_t localX = 0; localX < 4; localX++) {
-                    localDifference += imageDifference.at<cv::Vec3b>(y + localY, x + localX);
+            if (BufferedRandomGenerator::getRandom() > minimalRedrawPercentage) {
+                auto localDifference = cv::Vec3s(0, 0, 0);
+                for (int32_t localY = 0; localY < 4; localY++) {
+                    for (int32_t localX = 0; localX < 4; localX++) {
+                        localDifference += imageDifference.at<cv::Vec3b>(y + localY, x + localX);
+                    }
                 }
-            }
-            if (cv::norm(localDifference) < redrawOffset) {
-                continue;
+                if (cv::norm(localDifference) < redrawOffset) {
+                    continue;
+                }
             }
 
             auto firstForeground = image.at<cv::Vec3b>(y, x);
@@ -329,16 +338,19 @@ int32_t imageToTextDifferential(const cv::Mat& image, const cv::Mat& previousIma
 // 236 x 63 symbol resolution
 // 3776 x 2079 effective resolution
 int main(int argc, char* argv[]) {
-    if (argc != 4) {
-        std::cout << "Usage: " << argv[0] << " <path to file> <full redraw frequency> <symbol redraw offset>" << std::endl;
+    if (argc != 5) {
+        std::cout << "Usage: " << argv[0] << " <path to file> <enable differential render> <symbol redraw offset> <minimal redraw percentage>" << std::endl;
         return EXIT_FAILURE;
     }
     if (!std::filesystem::exists(argv[1])) {
         std::cout << "File " << argv[1] << " does not exist" << std::endl;
         return EXIT_FAILURE;
     }
-    auto fullRedrawFrequency = std::stoi(argv[2]);
-    auto redrawOffset = std::stod(argv[3]);
+    bool enableDifferentialRender = std::stoi(argv[2]) == 1;
+    auto redrawOffset = std::stof(argv[3]);
+    auto minimalRedrawPercentage = std::stof(argv[4]);
+
+    BufferedRandomGenerator::init();
 
     auto capture = cv::VideoCapture(argv[1]);
     auto bufferedVideoCapture = ThreadedVideoCapture(capture);
@@ -437,12 +449,11 @@ int main(int argc, char* argv[]) {
         cv::resize(frame, frame, cv::Size(symbolWidth * 4, symbolHeight * 4));
 
         int32_t differentialRealSize = differentialBufferSize;
-        bool needFullRedraw = previousFrame.empty() || (differentialCount >= fullRedrawFrequency && fullRedrawFrequency >= 0);
-        needFullRedraw ? differentialCount = 0 : differentialCount++;
+        bool needFullRedraw = previousFrame.empty() || !enableDifferentialRender;
         if (needFullRedraw) {
             imageToTextFull(frame, (columns - symbolWidth) / 2, buffer);
         } else {
-            differentialRealSize = imageToTextDifferential(frame, previousFrame, (columns - symbolWidth) / 2, differentialBuffer, redrawOffset);
+            differentialRealSize = imageToTextDifferential(frame, previousFrame, (columns - symbolWidth) / 2, differentialBuffer, redrawOffset, minimalRedrawPercentage);
         }
         auto endRenderTime = std::chrono::high_resolution_clock::now();
 

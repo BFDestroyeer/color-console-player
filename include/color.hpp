@@ -50,9 +50,9 @@ inline std::pair<const char *, bool> symbolByConvolutionFull(
         symbol = "▚";
         needSwap = false;
     }
-    if (std::popcount(convolution ^ 0b0011001100110011u) < min) {
+    if (std::popcount(convolution ^ 0b0011001111001100u) < min) {
         // QUADRANT UPPER RIGHT AND LOWER LEFT
-        min = std::popcount(convolution ^ 0b0011001100110011u);
+        min = std::popcount(convolution ^ 0b0011001111001100u);
         symbol = "▞";
         needSwap = false;
     }

@@ -373,7 +373,6 @@ int main(int argc, char* argv[]) {
     int32_t previousRows = -1;
     uint8_t* buffer = nullptr;
     uint8_t* differentialBuffer = nullptr;
-    int32_t differentialCount = 0;
 
 #ifdef _WIN32
     auto executableDir = std::filesystem::path(argv[0]).parent_path();
@@ -435,7 +434,6 @@ int main(int argc, char* argv[]) {
             buffer[bufferSize - 1] = 0x0;
             differentialBuffer[differentialBufferSize - 1] = 0x0;
             previousFrame = cv::Mat();
-            differentialCount = 0;
 #ifdef _WIN32
             std::system("cls");
 #endif _WIN32

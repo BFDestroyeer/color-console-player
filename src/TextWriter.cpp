@@ -17,10 +17,10 @@ TextWriter::TextWriter(std::chrono::time_point<std::chrono::high_resolution_cloc
             const auto frame = this->textFrameBuffer->getWriteFrame();
 #ifdef _WIN32
             SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), {0, 0});
-            if (true) {
+            if (frame->getIsFullRedraw()) {
                 WriteConsoleA(consoleOutput, frame->getBuffer(), frame->getBufferSize(), &ret, nullptr);
             } else {
-                //WriteConsoleA(consoleOutput, differentialBuffer, differentialRealSize, &ret, nullptr);
+                WriteConsoleA(consoleOutput, frame->getDifferentialBuffer(), frame->getDifferentialRealSize(), &ret, nullptr);
             }
             while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - this->beginPlayTime) -
                    frame->getFramePosition() <
@@ -38,8 +38,8 @@ TextWriter::TextWriter(std::chrono::time_point<std::chrono::high_resolution_cloc
             std::fflush(stdout);
 #endif __unix__
             std::cout << "\x1b[0;0m";
+            std::cout << std::format("\x1b[{};0H", frame->getSymbolHeight() + 1);
             std::cout << "Frame time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
-            << " Frame start delay: " << std::format("{:10.3f}", (std::chrono::duration_cast<std::chrono::nanoseconds>(beginFrameTime - this->beginPlayTime) - frame->getFramePosition()).count() / 1e6)
             << " Render time: " << std::format("{:10.3f}", frame->getRenderTime().count() / 1e6);
         }
     }).detach();

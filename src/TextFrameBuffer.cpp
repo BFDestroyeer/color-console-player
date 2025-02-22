@@ -1,12 +1,12 @@
 #include "TextFrameBuffer.hpp"
 
-TextFrameBuffer::TextFrameBuffer(size_t bufferSize) {
-    renderFrame.store(new TextFrame(bufferSize));
-    readyFrame.store(new TextFrame(bufferSize));
-    writeFrame.store(new TextFrame(bufferSize));
+TextFrameBuffer::TextFrameBuffer(size_t bufferSize, size_t differentialBufferSize){
+    renderFrame.store(new TextFrame(bufferSize, differentialBufferSize));
+    readyFrame.store(new TextFrame(bufferSize, differentialBufferSize));
+    writeFrame.store(new TextFrame(bufferSize, differentialBufferSize));
 }
 
-void TextFrameBuffer::resize(size_t bufferSize) {
+void TextFrameBuffer::resize(size_t bufferSize, size_t differentialBufferSize) {
 }
 
 TextFrame* TextFrameBuffer::getRenderFrame() {

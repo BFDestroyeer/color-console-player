@@ -373,7 +373,6 @@ int main(int argc, char* argv[]) {
 
     int32_t previousColumns = -1;
     int32_t previousRows = -1;
-    uint8_t* differentialBuffer = nullptr;
     TextFrameBuffer* textFrameBuffer = nullptr;
     TextWriter* textWriter = nullptr;
 
@@ -430,14 +429,10 @@ int main(int argc, char* argv[]) {
         const int32_t differentialBufferSize = symbolHeight * symbolWidth * DIFFERENTIAL_SYMBOL_SIZE + 1;
 
         if (textFrameBuffer == nullptr) {
-            textFrameBuffer = new TextFrameBuffer(bufferSize);
+            textFrameBuffer = new TextFrameBuffer(bufferSize, differentialBufferSize);
             textWriter = new TextWriter(beginPlayTime, textFrameBuffer);
         }
         if (previousColumns != columns || previousRows != rows) {
-            delete[] differentialBuffer;
-            differentialBuffer = new uint8_t[differentialBufferSize];
-            std::memset(differentialBuffer, ' ', differentialBufferSize - 1);
-            differentialBuffer[differentialBufferSize - 1] = 0x0;
             previousFrame = cv::Mat();
 #ifdef _WIN32
             std::system("cls");
@@ -457,10 +452,17 @@ int main(int argc, char* argv[]) {
         if (needFullRedraw) {
             imageToTextFull(frame, (columns - symbolWidth) / 2, renderFrame->getBuffer());
         } else {
-            differentialRealSize = imageToTextDifferential(frame, previousFrame, (columns - symbolWidth) / 2, differentialBuffer, redrawOffset, minimalRedrawPercentage);
+            differentialRealSize = imageToTextDifferential(frame, previousFrame, (columns - symbolWidth) / 2, renderFrame->getDifferentialBuffer(), redrawOffset, minimalRedrawPercentage);
         }
         auto endRenderTime = std::chrono::high_resolution_clock::now();
-        renderFrame->updateFrame(frameIndex++, frameDuration, framePosition, std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginRenderTime));
+        renderFrame->updateFrame(
+            frameIndex++,
+            needFullRedraw,
+            frameDuration,
+            framePosition,
+            std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginRenderTime),
+            differentialRealSize,
+            symbolHeight);
 
 //         auto beginPrintingTime = std::chrono::high_resolution_clock::now();
 // #ifdef _WIN32

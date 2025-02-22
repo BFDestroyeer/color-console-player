@@ -9,12 +9,13 @@
 
 TextWriter::TextWriter(
     std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime,
-    TextFrameBuffer* textFrameBuffer,
-    CONSOLE_SCREEN_BUFFER_INFO* consoleScreenBufferInfo)
-    : beginPlayTime(beginPlayTime), textFrameBuffer(textFrameBuffer), consoleScreenBufferInfo(consoleScreenBufferInfo) {
+    TextFrameBuffer* textFrameBuffer)
+    : beginPlayTime(beginPlayTime), textFrameBuffer(textFrameBuffer) {
     std::thread([this] {
         const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
         DWORD ret;
+        uint64_t previousFrameIndex = 0;
+        uint64_t skippedFramesCount = 0;
         while (true) {
             auto beginFrameTime = std::chrono::high_resolution_clock::now();
             const auto frame = this->textFrameBuffer->getWriteFrame();
@@ -29,8 +30,6 @@ TextWriter::TextWriter(
                    frame->getFramePosition() <
                frame->getFrameDuration()) {
         }
-            GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), this->consoleScreenBufferInfo);
-            auto endFrameTime = std::chrono::high_resolution_clock::now();
 #endif _WIN32
 #ifdef __unix__
             std::cout << "\x1b[0;0H";
@@ -41,10 +40,16 @@ TextWriter::TextWriter(
             }
             std::fflush(stdout);
 #endif __unix__
+            if (previousFrameIndex != 0 && previousFrameIndex + 1 != frame->getFrameIndex()) {
+                skippedFramesCount++;
+            }
+            previousFrameIndex = frame->getFrameIndex();
+            auto endFrameTime = std::chrono::high_resolution_clock::now();
             std::cout << "\x1b[0;0m";
             std::cout << std::format("\x1b[{};0H", frame->getSymbolHeight() + 1);
             std::cout << "Frame time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
-            << " Render time: " << std::format("{:10.3f}", frame->getRenderTime().count() / 1e6);
+            << " Render time: " << std::format("{:10.3f}", frame->getRenderTime().count() / 1e6)
+            << " Skipped frames: " << std::format("{:7d}", skippedFramesCount);
         }
     }).detach();
 }

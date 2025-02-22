@@ -389,6 +389,18 @@ int main(int argc, char* argv[]) {
 
     CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
+    std::thread([&consoleScreenBufferInfo] {
+        const auto consoleInput = GetStdHandle(STD_INPUT_HANDLE);
+        INPUT_RECORD inputRecord;
+        DWORD readCount;
+        while (true) {
+            ReadConsoleInput(consoleInput, &inputRecord, 1, &readCount);
+            if (inputRecord.EventType == WINDOW_BUFFER_SIZE_EVENT) {
+                GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
+            }
+        }
+    }).detach();
+
     uint64_t frameIndex = 0;
     while (true) {
 #ifdef _WIN32
@@ -430,7 +442,7 @@ int main(int argc, char* argv[]) {
 
         if (textFrameBuffer == nullptr) {
             textFrameBuffer = new TextFrameBuffer(bufferSize, differentialBufferSize);
-            textWriter = new TextWriter(beginPlayTime, textFrameBuffer, &consoleScreenBufferInfo);
+            textWriter = new TextWriter(beginPlayTime, textFrameBuffer);
         }
         if (previousColumns != columns || previousRows != rows) {
             textFrameBuffer->resize(bufferSize, differentialBufferSize);

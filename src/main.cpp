@@ -13,6 +13,8 @@
 #endif __unix__
 
 #include "BufferedRandomGenerator.hpp"
+#include "TextFrameBuffer.hpp"
+#include "TextWriter.hpp"
 #include "ThreadedVideoCapture.hpp"
 
 #include <opencv2/opencv.hpp>
@@ -371,8 +373,9 @@ int main(int argc, char* argv[]) {
 
     int32_t previousColumns = -1;
     int32_t previousRows = -1;
-    uint8_t* buffer = nullptr;
     uint8_t* differentialBuffer = nullptr;
+    TextFrameBuffer* textFrameBuffer = nullptr;
+    TextWriter* textWriter = nullptr;
 
 #ifdef _WIN32
     auto executableDir = std::filesystem::path(argv[0]).parent_path();
@@ -385,6 +388,7 @@ int main(int argc, char* argv[]) {
     std::cout << "\x1b[2J";
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();
 
+    uint64_t frameIndex = 0;
     while (true) {
         auto beginFrameTime = std::chrono::high_resolution_clock::now();
 #ifdef _WIN32
@@ -424,14 +428,15 @@ int main(int argc, char* argv[]) {
 
         const int32_t bufferSize = ((columns - symbolWidth) / 2 + FULL_SYMBOL_SIZE * symbolWidth + 7) * symbolHeight + 1;
         const int32_t differentialBufferSize = symbolHeight * symbolWidth * DIFFERENTIAL_SYMBOL_SIZE + 1;
+
+        if (textFrameBuffer == nullptr) {
+            textFrameBuffer = new TextFrameBuffer(bufferSize);
+            textWriter = new TextWriter(textFrameBuffer);
+        }
         if (previousColumns != columns || previousRows != rows) {
-            delete[] buffer;
             delete[] differentialBuffer;
-            buffer = new uint8_t[bufferSize];
             differentialBuffer = new uint8_t[differentialBufferSize];
-            std::memset(buffer, ' ', bufferSize - 1);
             std::memset(differentialBuffer, ' ', differentialBufferSize - 1);
-            buffer[bufferSize - 1] = 0x0;
             differentialBuffer[differentialBufferSize - 1] = 0x0;
             previousFrame = cv::Mat();
 #ifdef _WIN32
@@ -448,55 +453,57 @@ int main(int argc, char* argv[]) {
 
         int32_t differentialRealSize = differentialBufferSize;
         bool needFullRedraw = previousFrame.empty() || !enableDifferentialRender;
+        auto renderFrame = textFrameBuffer->getRenderFrame();
         if (needFullRedraw) {
-            imageToTextFull(frame, (columns - symbolWidth) / 2, buffer);
+            imageToTextFull(frame, (columns - symbolWidth) / 2, renderFrame->getBuffer());
         } else {
             differentialRealSize = imageToTextDifferential(frame, previousFrame, (columns - symbolWidth) / 2, differentialBuffer, redrawOffset, minimalRedrawPercentage);
         }
         auto endRenderTime = std::chrono::high_resolution_clock::now();
+        renderFrame->updateFrame(frameIndex++);
 
-        auto beginPrintingTime = std::chrono::high_resolution_clock::now();
-#ifdef _WIN32
-        SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), {0, 0});
-        if (needFullRedraw) {
-            WriteConsoleA(consoleOutput, buffer, bufferSize, &ret, nullptr);
-        } else {
-            WriteConsoleA(consoleOutput, differentialBuffer, differentialRealSize, &ret, nullptr);
-        }
-#endif _WIN32
-#ifdef __unix__
-        std::cout << "\x1b[0;0H";
-        if (needFullRedraw) {
-            std::fwrite(buffer, bufferSize, 1, stdout);
-        } else {
-            std::fwrite(differentialBuffer, differentialRealSize, 1, stdout);
-        }
-
-        std::fflush(stdout);
-#endif __unix__
-        auto endPrintingTime = std::chrono::high_resolution_clock::now();
+//         auto beginPrintingTime = std::chrono::high_resolution_clock::now();
+// #ifdef _WIN32
+//         SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), {0, 0});
+//         if (needFullRedraw) {
+//             WriteConsoleA(consoleOutput, buffer, bufferSize, &ret, nullptr);
+//         } else {
+//             WriteConsoleA(consoleOutput, differentialBuffer, differentialRealSize, &ret, nullptr);
+//         }
+// #endif _WIN32
+// #ifdef __unix__
+//         std::cout << "\x1b[0;0H";
+//         if (needFullRedraw) {
+//             std::fwrite(buffer, bufferSize, 1, stdout);
+//         } else {
+//             std::fwrite(differentialBuffer, differentialRealSize, 1, stdout);
+//         }
+//
+//         std::fflush(stdout);
+// #endif __unix__
+//         auto endPrintingTime = std::chrono::high_resolution_clock::now();
         std::swap(frame, previousFrame);
 
-        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
-                   framePosition <
-               frameDuration) {
-        }
-        auto endFrameTime = std::chrono::high_resolution_clock::now();
-
-        std::cout << "\x1b[0;0m";
-        std::cout << std::format("\x1b[{};0H", symbolHeight + 1);
-        std::cout
-            << "Render time: "
-            << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginFrameTime).count() / 1e6)
-            << "ms "
-            << " Printing time: "
-            << std::format(
-                   "{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endPrintingTime - beginPrintingTime).count() / 1e6)
-            << "ms "
-            << "Frame time: "
-            << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
-            << "ms "
-            << "Redraw: " << std::format("{:10.3f}%", static_cast<double>(differentialRealSize) / static_cast<double>(differentialBufferSize) * 100);
+        // while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
+        //            framePosition <
+        //        frameDuration) {
+        // }
+        // auto endFrameTime = std::chrono::high_resolution_clock::now();
+        //
+        // std::cout << "\x1b[0;0m";
+        // std::cout << std::format("\x1b[{};0H", symbolHeight + 1);
+        // std::cout
+        //     << "Render time: "
+        //     << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginFrameTime).count() / 1e6)
+        //     << "ms "
+        //     << " Printing time: "
+        //     << std::format(
+        //            "{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endPrintingTime - beginPrintingTime).count() / 1e6)
+        //     << "ms "
+        //     << "Frame time: "
+        //     << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
+        //     << "ms "
+        //     << "Redraw: " << std::format("{:10.3f}%", static_cast<double>(differentialRealSize) / static_cast<double>(differentialBufferSize) * 100);
     }
     return EXIT_SUCCESS;
 }

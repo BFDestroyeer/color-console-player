@@ -2,17 +2,17 @@
 
 ThreadedVideoCapture::ThreadedVideoCapture(cv::VideoCapture& videoCapture) : videoCapture(videoCapture) {
     isFrameReady = false;
-    thread = std::thread([&] {
+    std::thread([&] {
         while (true) {
             while (isFrameReady) {}
             frameReadResult = videoCapture.read(frame);
             position = videoCapture.get(cv::CAP_PROP_POS_MSEC);
+            isFrameReady = true;
             if (!frameReadResult) {
                 break;
             }
-            isFrameReady = true;
         }
-    });
+    }).detach();
 }
 
 bool ThreadedVideoCapture::read(cv::Mat& outputFrame, double& outputPosition) {

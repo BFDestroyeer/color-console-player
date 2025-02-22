@@ -1,5 +1,6 @@
 #include "TextWriter.hpp"
 
+#include <chrono>
 #include <iostream>
 #include <thread>
 #ifdef _WIN32
@@ -7,11 +8,12 @@
 #endif _WIN32
 
 
-TextWriter::TextWriter(TextFrameBuffer* textFrameBuffer) : textFrameBuffer(textFrameBuffer) {
+TextWriter::TextWriter(std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime, TextFrameBuffer* textFrameBuffer) : beginPlayTime(beginPlayTime), textFrameBuffer(textFrameBuffer) {
     std::thread([this] {
         const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
         DWORD ret;
         while (true) {
+            auto beginFrameTime = std::chrono::high_resolution_clock::now();
             const auto frame = this->textFrameBuffer->getWriteFrame();
 #ifdef _WIN32
             SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), {0, 0});
@@ -20,6 +22,11 @@ TextWriter::TextWriter(TextFrameBuffer* textFrameBuffer) : textFrameBuffer(textF
             } else {
                 //WriteConsoleA(consoleOutput, differentialBuffer, differentialRealSize, &ret, nullptr);
             }
+            while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - this->beginPlayTime) -
+                   frame->getFramePosition() <
+               frame->getFrameDuration()) {
+        }
+            auto endFrameTime = std::chrono::high_resolution_clock::now();
 #endif _WIN32
 #ifdef __unix__
             std::cout << "\x1b[0;0H";
@@ -31,6 +38,9 @@ TextWriter::TextWriter(TextFrameBuffer* textFrameBuffer) : textFrameBuffer(textF
             std::fflush(stdout);
 #endif __unix__
             std::cout << "\x1b[0;0m";
+            std::cout << "Frame time: " << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
+            << " Frame start delay: " << std::format("{:10.3f}", (std::chrono::duration_cast<std::chrono::nanoseconds>(beginFrameTime - this->beginPlayTime) - frame->getFramePosition()).count() / 1e6)
+            << " Render time: " << std::format("{:10.3f}", frame->getRenderTime().count() / 1e6);
         }
     }).detach();
 }

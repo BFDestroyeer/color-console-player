@@ -388,12 +388,12 @@ int main(int argc, char* argv[]) {
     std::cout << "\x1b[2J";
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();
 
+    CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
     uint64_t frameIndex = 0;
     while (true) {
-        auto beginFrameTime = std::chrono::high_resolution_clock::now();
 #ifdef _WIN32
-        CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo;
-        GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
+        auto beginRenderTime = std::chrono::high_resolution_clock::now();
         const int32_t columns = consoleScreenBufferInfo.srWindow.Right - consoleScreenBufferInfo.srWindow.Left + 1;
         const int32_t rows = consoleScreenBufferInfo.srWindow.Bottom - consoleScreenBufferInfo.srWindow.Top;
 #endif _WIN32
@@ -410,7 +410,7 @@ int main(int argc, char* argv[]) {
         }
         const auto framePosition =
             std::chrono::duration<int64_t, std::ratio<1, 1000000000>>(static_cast<int64_t>(capturePosition * 1e6));
-        if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration) {
+        if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
             continue;
         }
 
@@ -431,7 +431,7 @@ int main(int argc, char* argv[]) {
 
         if (textFrameBuffer == nullptr) {
             textFrameBuffer = new TextFrameBuffer(bufferSize);
-            textWriter = new TextWriter(textFrameBuffer);
+            textWriter = new TextWriter(beginPlayTime, textFrameBuffer);
         }
         if (previousColumns != columns || previousRows != rows) {
             delete[] differentialBuffer;
@@ -460,7 +460,7 @@ int main(int argc, char* argv[]) {
             differentialRealSize = imageToTextDifferential(frame, previousFrame, (columns - symbolWidth) / 2, differentialBuffer, redrawOffset, minimalRedrawPercentage);
         }
         auto endRenderTime = std::chrono::high_resolution_clock::now();
-        renderFrame->updateFrame(frameIndex++);
+        renderFrame->updateFrame(frameIndex++, frameDuration, framePosition, std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginRenderTime));
 
 //         auto beginPrintingTime = std::chrono::high_resolution_clock::now();
 // #ifdef _WIN32
@@ -484,10 +484,10 @@ int main(int argc, char* argv[]) {
 //         auto endPrintingTime = std::chrono::high_resolution_clock::now();
         std::swap(frame, previousFrame);
 
-        // while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
-        //            framePosition <
-        //        frameDuration) {
-        // }
+        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
+                   framePosition <
+               (frameDuration - frameDuration)) {
+        }
         // auto endFrameTime = std::chrono::high_resolution_clock::now();
         //
         // std::cout << "\x1b[0;0m";

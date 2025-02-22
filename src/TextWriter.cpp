@@ -7,8 +7,11 @@
 #include <Windows.h>
 #endif _WIN32
 
-
-TextWriter::TextWriter(std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime, TextFrameBuffer* textFrameBuffer) : beginPlayTime(beginPlayTime), textFrameBuffer(textFrameBuffer) {
+TextWriter::TextWriter(
+    std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime,
+    TextFrameBuffer* textFrameBuffer,
+    CONSOLE_SCREEN_BUFFER_INFO* consoleScreenBufferInfo)
+    : beginPlayTime(beginPlayTime), textFrameBuffer(textFrameBuffer), consoleScreenBufferInfo(consoleScreenBufferInfo) {
     std::thread([this] {
         const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
         DWORD ret;
@@ -26,6 +29,7 @@ TextWriter::TextWriter(std::chrono::time_point<std::chrono::high_resolution_cloc
                    frame->getFramePosition() <
                frame->getFrameDuration()) {
         }
+            GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), this->consoleScreenBufferInfo);
             auto endFrameTime = std::chrono::high_resolution_clock::now();
 #endif _WIN32
 #ifdef __unix__

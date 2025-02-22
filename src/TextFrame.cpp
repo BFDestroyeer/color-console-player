@@ -13,6 +13,7 @@ TextFrame::TextFrame(const size_t bufferSize, const size_t differentialBufferSiz
 
 TextFrame::~TextFrame() {
     delete[] this->buffer;
+    delete[] this->differentialBuffer;
 }
 
 uint8_t* TextFrame::getBuffer() const {

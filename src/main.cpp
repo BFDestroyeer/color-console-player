@@ -430,9 +430,10 @@ int main(int argc, char* argv[]) {
 
         if (textFrameBuffer == nullptr) {
             textFrameBuffer = new TextFrameBuffer(bufferSize, differentialBufferSize);
-            textWriter = new TextWriter(beginPlayTime, textFrameBuffer);
+            textWriter = new TextWriter(beginPlayTime, textFrameBuffer, &consoleScreenBufferInfo);
         }
         if (previousColumns != columns || previousRows != rows) {
+            textFrameBuffer->resize(bufferSize, differentialBufferSize);
             previousFrame = cv::Mat();
 #ifdef _WIN32
             std::system("cls");

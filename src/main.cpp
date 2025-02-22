@@ -464,49 +464,12 @@ int main(int argc, char* argv[]) {
             std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginRenderTime),
             differentialRealSize,
             symbolHeight);
-
-//         auto beginPrintingTime = std::chrono::high_resolution_clock::now();
-// #ifdef _WIN32
-//         SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), {0, 0});
-//         if (needFullRedraw) {
-//             WriteConsoleA(consoleOutput, buffer, bufferSize, &ret, nullptr);
-//         } else {
-//             WriteConsoleA(consoleOutput, differentialBuffer, differentialRealSize, &ret, nullptr);
-//         }
-// #endif _WIN32
-// #ifdef __unix__
-//         std::cout << "\x1b[0;0H";
-//         if (needFullRedraw) {
-//             std::fwrite(buffer, bufferSize, 1, stdout);
-//         } else {
-//             std::fwrite(differentialBuffer, differentialRealSize, 1, stdout);
-//         }
-//
-//         std::fflush(stdout);
-// #endif __unix__
-//         auto endPrintingTime = std::chrono::high_resolution_clock::now();
         std::swap(frame, previousFrame);
 
         while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
                    framePosition <
                (frameDuration - frameDuration)) {
         }
-        // auto endFrameTime = std::chrono::high_resolution_clock::now();
-        //
-        // std::cout << "\x1b[0;0m";
-        // std::cout << std::format("\x1b[{};0H", symbolHeight + 1);
-        // std::cout
-        //     << "Render time: "
-        //     << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginFrameTime).count() / 1e6)
-        //     << "ms "
-        //     << " Printing time: "
-        //     << std::format(
-        //            "{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endPrintingTime - beginPrintingTime).count() / 1e6)
-        //     << "ms "
-        //     << "Frame time: "
-        //     << std::format("{:10.3f}", std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6)
-        //     << "ms "
-        //     << "Redraw: " << std::format("{:10.3f}%", static_cast<double>(differentialRealSize) / static_cast<double>(differentialBufferSize) * 100);
     }
     return EXIT_SUCCESS;
 }

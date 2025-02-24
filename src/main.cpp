@@ -542,11 +542,8 @@ int main(int argc, char* argv[]) {
         );
         std::swap(frame, previousFrame);
 
-        while (std::chrono::duration_cast<std::chrono::nanoseconds>(
-                   std::chrono::high_resolution_clock::now() - beginPlayTime
-               ) -
-               framePosition <
-               (frameDuration - frameDuration)) {
+        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
+               framePosition < (frameDuration - frameDuration)) {
         }
     }
     return EXIT_SUCCESS;

@@ -6,16 +6,16 @@
 
 class TextFrameBuffer {
 private:
-    std::atomic<TextFrame*> renderFrame;
-    std::atomic<TextFrame*> readyFrame;
-    std::atomic<TextFrame*> writeFrame;
+    std::atomic<std::shared_ptr<TextFrame>> renderFrame;
+    std::atomic<std::shared_ptr<TextFrame>> readyFrame;
+    std::atomic<std::shared_ptr<TextFrame>> writeFrame;
 
 public:
     explicit TextFrameBuffer(size_t bufferSize, size_t differentialBufferSize);
 
     void resize(size_t bufferSize, size_t differentialBufferSize);
 
-    TextFrame* getRenderFrame();
+    std::shared_ptr<TextFrame> getRenderFrame();
 
-    TextFrame* getWriteFrame();
+    std::shared_ptr<TextFrame> getWriteFrame();
 };

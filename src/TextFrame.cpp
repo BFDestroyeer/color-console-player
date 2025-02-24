@@ -40,7 +40,7 @@ std::chrono::nanoseconds TextFrame::getFrameDuration() const {
     return frameDuration;
 }
 
-std::chrono::duration<int64_t, std::ratio<1, 1000000000>> TextFrame::getFramePosition() const {
+std::chrono::duration<int64_t, std::ratio<1, 1000000000> > TextFrame::getFramePosition() const {
     return framePosition;
 }
 
@@ -61,10 +61,11 @@ void TextFrame::updateFrame(
     const uint64_t frameIndex,
     bool isFullRedraw,
     std::chrono::nanoseconds frameDuration,
-    std::chrono::duration<int64_t, std::ratio<1, 1000000000>> framePosition,
+    std::chrono::duration<int64_t, std::ratio<1, 1000000000> > framePosition,
     std::chrono::nanoseconds renderTime,
     size_t differentialRealSize,
-    int32_t symbolHeight) {
+    int32_t symbolHeight
+) {
     this->frameIndex = frameIndex;
     this->isFullRedraw = isFullRedraw;
     this->frameDuration = frameDuration;
@@ -73,4 +74,3 @@ void TextFrame::updateFrame(
     this->differentialRealSize = differentialRealSize;
     this->symbolHeight = symbolHeight;
 }
-

@@ -5,7 +5,7 @@ void BufferedRandomGenerator::init() {
     std::mt19937 randomGenerator(device());
     std::uniform_real_distribution<float> distribution(0.0, 100.0);
 
-    for (float& i : buffer) {
+    for (float& i: buffer) {
         i = distribution(randomGenerator);
     }
     position = 0;

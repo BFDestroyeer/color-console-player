@@ -3,7 +3,7 @@
 #include <random>
 
 class BufferedRandomGenerator {
-  private:
+private:
     static constexpr size_t BUFFER_SIZE = 709;
 
     inline static size_t position = 0;
@@ -11,7 +11,7 @@ class BufferedRandomGenerator {
 
     static BufferedRandomGenerator instance;
 
-  public:
+public:
     BufferedRandomGenerator() = delete;
 
     static void init();

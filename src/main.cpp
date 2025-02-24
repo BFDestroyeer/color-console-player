@@ -37,7 +37,6 @@ void imageToTextFull(const cv::Mat& image, const uint64_t horizontalOffset, uint
 #pragma omp parallel for num_threads(4)
     for (int32_t y = 0; y < image.rows; y += 4) {
         for (int32_t x = 0; x < image.cols; x += 4) {
-
             auto firstForeground = image.at<cv::Vec3b>(y, x);
             auto firstBackground = image.at<cv::Vec3b>(y + 3, x + 3);
 
@@ -82,94 +81,117 @@ void imageToTextFull(const cv::Mat& image, const uint64_t horizontalOffset, uint
             for (int32_t localY = 0; localY < 4; localY++) {
                 for (int32_t localX = 0; localX < 4; localX++) {
                     const int32_t index = localY * 4 + localX;
-                    convolutionFull += getColor(secondForeground, secondBackground, image.at<cv::Vec3b>(y + localY, x + localX)) << index;
+                    convolutionFull += getColor(
+                        secondForeground,
+                        secondBackground,
+                        image.at<cv::Vec3b>(y + localY, x + localX)
+                    ) << index;
                 }
             }
 
-            auto [symbol, needSwap] = symbolByConvolutionFull(convolutionFull, foregroundClusterSize, backgroundClusterSize);
+            auto [symbol, needSwap] = symbolByConvolutionFull(
+                convolutionFull,
+                foregroundClusterSize,
+                backgroundClusterSize
+            );
             if (needSwap) {
                 std::swap(secondForeground, secondBackground);
             }
 
             // \x1b[38;2;<R>;<G>;<B>m\x1b[48;2;<R>;<G>;<B>m<SYMBOL>
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE,
+                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 4) *
+                FULL_SYMBOL_SIZE,
                 "\x1b[38;2;",
-                7);
+                7
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 7,
+                (x / 4) * FULL_SYMBOL_SIZE + 7,
                 colorToText(secondForeground[2]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 10,
+                (x / 4) * FULL_SYMBOL_SIZE + 10,
                 ";",
-                1);
+                1
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 11,
+                (x / 4) * FULL_SYMBOL_SIZE + 11,
                 colorToText(secondForeground[1]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 14,
+                (x / 4) * FULL_SYMBOL_SIZE + 14,
                 ";",
-                1);
+                1
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 15,
+                (x / 4) * FULL_SYMBOL_SIZE + 15,
                 colorToText(secondForeground[0]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 18,
+                (x / 4) * FULL_SYMBOL_SIZE + 18,
                 "m\x1b[48;2;",
-                8);
+                8
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 26,
+                (x / 4) * FULL_SYMBOL_SIZE + 26,
                 colorToText(secondBackground[2]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 29,
+                (x / 4) * FULL_SYMBOL_SIZE + 29,
                 ";",
-                1);
+                1
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 30,
+                (x / 4) * FULL_SYMBOL_SIZE + 30,
                 colorToText(secondBackground[1]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 33,
+                (x / 4) * FULL_SYMBOL_SIZE + 33,
                 ";",
-                1);
+                1
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 34,
+                (x / 4) * FULL_SYMBOL_SIZE + 34,
                 colorToText(secondBackground[0]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 37,
+                (x / 4) * FULL_SYMBOL_SIZE + 37,
                 "m",
-                1);
+                1
+            );
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                    (x / 4) * FULL_SYMBOL_SIZE + 38,
+                (x / 4) * FULL_SYMBOL_SIZE + 38,
                 symbol,
-                3);
+                3
+            );
         }
 
         // Reset color mode and end line
         std::memcpy(
             buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (image.cols / 4) * FULL_SYMBOL_SIZE,
+            (image.cols / 4) * FULL_SYMBOL_SIZE,
             "\x1b[0;0m\n",
-            7);
+            7
+        );
     }
 }
 
@@ -179,13 +201,13 @@ int32_t imageToTextDifferential(
     const uint64_t horizontalOffset,
     uint8_t* buffer,
     const float redrawOffset,
-    const float minimalRedrawPercentage) {
+    const float minimalRedrawPercentage
+) {
     int32_t bufferPosition = 0;
     auto imageDifference = cv::Mat();
     cv::absdiff(image, previousImage, imageDifference);
     for (int32_t y = 0; y < image.rows; y += 4) {
         for (int32_t x = 0; x < image.cols; x += 4) {
-
             if (BufferedRandomGenerator::getRandom() > minimalRedrawPercentage) {
                 auto localDifference = cv::Vec3s(0, 0, 0);
                 for (int32_t localY = 0; localY < 4; localY++) {
@@ -242,11 +264,19 @@ int32_t imageToTextDifferential(
             for (int32_t localY = 0; localY < 4; localY++) {
                 for (int32_t localX = 0; localX < 4; localX++) {
                     const int32_t index = localY * 4 + localX;
-                    convolutionFull += getColor(secondForeground, secondBackground, image.at<cv::Vec3b>(y + localY, x + localX)) << index;
+                    convolutionFull += getColor(
+                        secondForeground,
+                        secondBackground,
+                        image.at<cv::Vec3b>(y + localY, x + localX)
+                    ) << index;
                 }
             }
 
-            auto [symbol, needSwap] = symbolByConvolutionFull(convolutionFull, foregroundClusterSize, backgroundClusterSize);
+            auto [symbol, needSwap] = symbolByConvolutionFull(
+                convolutionFull,
+                foregroundClusterSize,
+                backgroundClusterSize
+            );
             if (needSwap) {
                 std::swap(secondForeground, secondBackground);
             }
@@ -256,79 +286,97 @@ int32_t imageToTextDifferential(
                 buffer + bufferPosition,
                 "\x1b[",
                 2
-                );
+            );
             std::memcpy(
                 buffer + bufferPosition + 2,
                 std::format("{:03d}", y / 4 + 1).c_str(),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + bufferPosition + 5,
                 ";",
-                3);
+                3
+            );
             std::memcpy(
                 buffer + bufferPosition + 6,
                 std::format("{:03d}", (x / 4 + horizontalOffset + 1)).c_str(),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + bufferPosition + 9,
                 "H",
-                3);
+                3
+            );
             std::memcpy(
                 buffer + bufferPosition + 10,
                 "\x1b[38;2;",
-                7);
+                7
+            );
             std::memcpy(
                 buffer + bufferPosition + 17,
                 colorToText(secondForeground[2]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + bufferPosition + 20,
                 ";",
-                1);
+                1
+            );
             std::memcpy(
                 buffer + bufferPosition + 21,
                 colorToText(secondForeground[1]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + bufferPosition + 24,
                 ";",
-                1);
+                1
+            );
             std::memcpy(
                 buffer + bufferPosition + 25,
                 colorToText(secondForeground[0]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + bufferPosition + 28,
                 "m\x1b[48;2;",
-                8);
+                8
+            );
             std::memcpy(
                 buffer + bufferPosition + 36,
                 colorToText(secondBackground[2]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + bufferPosition + 39,
                 ";",
-                1);
+                1
+            );
             std::memcpy(
                 buffer + bufferPosition + 40,
                 colorToText(secondBackground[1]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + bufferPosition + 43,
                 ";",
-                1);
+                1
+            );
             std::memcpy(
                 buffer + bufferPosition + 44,
                 colorToText(secondBackground[0]),
-                3);
+                3
+            );
             std::memcpy(
                 buffer + bufferPosition + 47,
                 "m",
-                1);
+                1
+            );
             std::memcpy(
                 buffer + bufferPosition + 48,
                 symbol,
-                3);
+                3
+            );
             bufferPosition += DIFFERENTIAL_SYMBOL_SIZE;
         }
     }
@@ -341,7 +389,9 @@ int32_t imageToTextDifferential(
 // 3776 x 2079 effective resolution
 int main(int argc, char* argv[]) {
     if (argc != 5) {
-        std::cout << "Usage: " << argv[0] << " <path to file> <enable differential render> <symbol redraw offset> <minimal redraw percentage>" << std::endl;
+        std::cout << "Usage: " << argv[0] <<
+                " <path to file> <enable differential render> <symbol redraw offset> <minimal redraw percentage>" <<
+                std::endl;
         return EXIT_FAILURE;
     }
     if (!std::filesystem::exists(argv[1])) {
@@ -378,7 +428,10 @@ int main(int argc, char* argv[]) {
 
 #ifdef _WIN32
     auto executableDir = std::filesystem::path(argv[0]).parent_path();
-    _popen(std::format("{}\\ffplay.exe \"{}\" -nodisp -autoexit -loglevel quiet", executableDir.string(), argv[1]).c_str(), "r");
+    _popen(
+        std::format("{}\\ffplay.exe \"{}\" -nodisp -autoexit -loglevel quiet", executableDir.string(), argv[1]).c_str(),
+        "r"
+    );
 #endif _WIN32
 #ifdef __unix__
     popen(std::format("ffplay \"{}\" -nodisp -autoexit -loglevel quiet", argv[1]).c_str(), "r");
@@ -389,17 +442,19 @@ int main(int argc, char* argv[]) {
 
     CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
-    std::thread([&consoleScreenBufferInfo] {
-        const auto consoleInput = GetStdHandle(STD_INPUT_HANDLE);
-        INPUT_RECORD inputRecord;
-        DWORD readCount;
-        while (true) {
-            ReadConsoleInput(consoleInput, &inputRecord, 1, &readCount);
-            if (inputRecord.EventType == WINDOW_BUFFER_SIZE_EVENT) {
-                GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
+    std::thread(
+        [&consoleScreenBufferInfo] {
+            const auto consoleInput = GetStdHandle(STD_INPUT_HANDLE);
+            INPUT_RECORD inputRecord;
+            DWORD readCount;
+            while (true) {
+                ReadConsoleInput(consoleInput, &inputRecord, 1, &readCount);
+                if (inputRecord.EventType == WINDOW_BUFFER_SIZE_EVENT) {
+                    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
+                }
             }
         }
-    }).detach();
+    ).detach();
 
     uint64_t frameIndex = 0;
     while (true) {
@@ -420,7 +475,7 @@ int main(int argc, char* argv[]) {
             break;
         }
         const auto framePosition =
-            std::chrono::duration<int64_t, std::ratio<1, 1000000000>>(static_cast<int64_t>(capturePosition * 1e6));
+                std::chrono::duration<int64_t, std::ratio<1, 1000000000> >(static_cast<int64_t>(capturePosition * 1e6));
         if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
             continue;
         }
@@ -437,7 +492,8 @@ int main(int argc, char* argv[]) {
             symbolWidth = static_cast<int32_t>(rows / frameAspectRatio * (33.0 / 16.0));
         }
 
-        const int32_t bufferSize = ((columns - symbolWidth) / 2 + FULL_SYMBOL_SIZE * symbolWidth + 7) * symbolHeight + 1;
+        const int32_t bufferSize = ((columns - symbolWidth) / 2 + FULL_SYMBOL_SIZE * symbolWidth + 7) * symbolHeight +
+                                   1;
         const int32_t differentialBufferSize = symbolHeight * symbolWidth * DIFFERENTIAL_SYMBOL_SIZE + 1;
 
         if (textFrameBuffer == nullptr) {
@@ -465,7 +521,14 @@ int main(int argc, char* argv[]) {
         if (needFullRedraw) {
             imageToTextFull(frame, (columns - symbolWidth) / 2, renderFrame->getBuffer());
         } else {
-            differentialRealSize = imageToTextDifferential(frame, previousFrame, (columns - symbolWidth) / 2, renderFrame->getDifferentialBuffer(), redrawOffset, minimalRedrawPercentage);
+            differentialRealSize = imageToTextDifferential(
+                frame,
+                previousFrame,
+                (columns - symbolWidth) / 2,
+                renderFrame->getDifferentialBuffer(),
+                redrawOffset,
+                minimalRedrawPercentage
+            );
         }
         auto endRenderTime = std::chrono::high_resolution_clock::now();
         renderFrame->updateFrame(
@@ -475,11 +538,14 @@ int main(int argc, char* argv[]) {
             framePosition,
             std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginRenderTime),
             differentialRealSize,
-            symbolHeight);
+            symbolHeight
+        );
         std::swap(frame, previousFrame);
 
-        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
-                   framePosition <
+        while (std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   std::chrono::high_resolution_clock::now() - beginPlayTime
+               ) -
+               framePosition <
                (frameDuration - frameDuration)) {
         }
     }

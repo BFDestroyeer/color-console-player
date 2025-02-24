@@ -3,7 +3,7 @@
 #include <chrono>
 
 class TextFrame {
-  private:
+private:
     uint8_t* buffer;
     size_t bufferSize;
     uint8_t* differentialBuffer;
@@ -11,12 +11,12 @@ class TextFrame {
     uint64_t frameIndex;
     bool isFullRedraw;
     std::chrono::nanoseconds frameDuration;
-    std::chrono::duration<int64_t, std::ratio<1, 1000000000>> framePosition;
+    std::chrono::duration<int64_t, std::ratio<1, 1000000000> > framePosition;
     std::chrono::nanoseconds renderTime;
     size_t differentialRealSize;
     int32_t symbolHeight;
 
-  public:
+public:
     TextFrame(size_t bufferSize, size_t differentialBufferSize);
 
     ~TextFrame();
@@ -40,7 +40,7 @@ class TextFrame {
     std::chrono::nanoseconds getFrameDuration() const;
 
     [[nodiscard]]
-    std::chrono::duration<int64_t, std::ratio<1, 1000000000>> getFramePosition() const;
+    std::chrono::duration<int64_t, std::ratio<1, 1000000000> > getFramePosition() const;
 
     [[nodiscard]]
     std::chrono::nanoseconds getRenderTime() const;
@@ -55,8 +55,9 @@ class TextFrame {
         uint64_t frameIndex,
         bool isFullRedraw,
         std::chrono::nanoseconds frameDuration,
-        std::chrono::duration<int64_t, std::ratio<1, 1000000000>> framePosition,
+        std::chrono::duration<int64_t, std::ratio<1, 1000000000> > framePosition,
         std::chrono::nanoseconds renderTime,
         size_t differentialRealSize,
-        int32_t symbolHeight);
+        int32_t symbolHeight
+    );
 };

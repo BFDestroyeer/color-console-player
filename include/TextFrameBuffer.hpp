@@ -16,5 +16,6 @@ public:
     void resize(size_t bufferSize, size_t differentialBufferSize);
 
     TextFrame* getRenderFrame();
+
     TextFrame* getWriteFrame();
 };

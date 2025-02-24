@@ -5,7 +5,7 @@
 #include <opencv2/opencv.hpp>
 
 class ThreadedVideoCapture {
-  private:
+private:
     cv::VideoCapture& videoCapture;
 
     cv::Mat frame;
@@ -14,7 +14,7 @@ class ThreadedVideoCapture {
 
     volatile bool isFrameReady;
 
-  public:
+public:
     explicit ThreadedVideoCapture(cv::VideoCapture& videoCapture);
 
     bool read(cv::Mat& outputFrame, double& outputPosition);

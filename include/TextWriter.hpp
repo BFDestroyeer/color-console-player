@@ -5,7 +5,7 @@
 #include "TextFrameBuffer.hpp"
 
 class TextWriter {
-  private:
+private:
     std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime;
     TextFrameBuffer* textFrameBuffer;
 

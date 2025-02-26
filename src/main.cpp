@@ -40,8 +40,8 @@ void imageToTextFull(const cv::Mat& image, const uint64_t horizontalOffset, uint
             auto firstForeground = image.at<cv::Vec3b>(y, x);
             auto firstBackground = image.at<cv::Vec3b>(y + 3, x + 3);
 
-            double maxNorm = DBL_MAX;
-            double minNorm = DBL_MIN;
+            double maxNorm = DBL_MIN;
+            double minNorm = DBL_MAX;
             for (int32_t localY = 0; localY < 4; localY++) {
                 for (int32_t localX = 0; localX < 4; localX++) {
                     auto& color = image.at<cv::Vec3b>(y + localY, x + localX);
@@ -223,8 +223,8 @@ int32_t imageToTextDifferential(
             auto firstForeground = image.at<cv::Vec3b>(y, x);
             auto firstBackground = image.at<cv::Vec3b>(y + 3, x + 3);
 
-            double maxNorm = DBL_MAX;
-            double minNorm = DBL_MIN;
+            double maxNorm = DBL_MIN;
+            double minNorm = DBL_MAX;
             for (int32_t localY = 0; localY < 4; localY++) {
                 for (int32_t localX = 0; localX < 4; localX++) {
                     auto& color = image.at<cv::Vec3b>(y + localY, x + localX);

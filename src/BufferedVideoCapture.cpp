@@ -1,6 +1,6 @@
-#include "ThreadedVideoCapture.hpp"
+#include "BufferedVideoCapture.hpp"
 
-ThreadedVideoCapture::ThreadedVideoCapture(cv::VideoCapture& videoCapture) : videoCapture(videoCapture) {
+BufferedVideoCapture::BufferedVideoCapture(cv::VideoCapture& videoCapture) : videoCapture(videoCapture) {
     isFrameReady = false;
     std::thread(
         [&] {
@@ -18,7 +18,7 @@ ThreadedVideoCapture::ThreadedVideoCapture(cv::VideoCapture& videoCapture) : vid
     ).detach();
 }
 
-bool ThreadedVideoCapture::read(cv::Mat& outputFrame, double& outputPosition) {
+bool BufferedVideoCapture::read(cv::Mat& outputFrame, double& outputPosition) {
     while (!isFrameReady) {
     }
     outputFrame = std::move(frame);

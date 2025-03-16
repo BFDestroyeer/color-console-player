@@ -14,186 +14,12 @@
 
 #include "BufferedRandomGenerator.hpp"
 #include "TextFrameBuffer.hpp"
-#include "TextWriter.hpp"
-#include "ThreadedVideoCapture.hpp"
+#include "FrameWriter.hpp"
+#include "BufferedVideoCapture.hpp"
 
 #include <opencv2/opencv.hpp>
 
-#include "color.hpp"
-
-#pragma comment(lib, "winmm.lib")
-
-constexpr auto FULL_SYMBOL_SIZE = 41;
-constexpr auto DIFFERENTIAL_SYMBOL_SIZE = 10 + FULL_SYMBOL_SIZE;
-
-uint16_t getColor(const cv::Vec3s& foreground, const cv::Vec3s& background, const cv::Vec3s& color) {
-    if (cv::norm(foreground - color, cv::NORM_L2SQR) < cv::norm(background - color, cv::NORM_L2SQR)) {
-        return 1;
-    }
-    return 0;
-}
-
-void imageToTextFull(const cv::Mat& image, const uint64_t horizontalOffset, uint8_t* buffer) {
-#pragma omp parallel for num_threads(4)
-    for (int32_t y = 0; y < image.rows; y += 4) {
-        for (int32_t x = 0; x < image.cols; x += 4) {
-            auto firstForeground = image.at<cv::Vec3b>(y, x);
-            auto firstBackground = image.at<cv::Vec3b>(y + 3, x + 3);
-
-            double maxNorm = DBL_MIN;
-            double minNorm = DBL_MAX;
-            for (int32_t localY = 0; localY < 4; localY++) {
-                for (int32_t localX = 0; localX < 4; localX++) {
-                    auto& color = image.at<cv::Vec3b>(y + localY, x + localX);
-                    const auto colorNorm = cv::norm(color, cv::NORM_L2SQR);
-                    if (colorNorm > maxNorm) {
-                        maxNorm = colorNorm;
-                        firstForeground = color;
-                    }
-                    if (colorNorm < minNorm) {
-                        minNorm = colorNorm;
-                        firstBackground = color;
-                    }
-                }
-            }
-
-            auto secondForeground = cv::Vec3s(0, 0, 0);
-            auto secondBackground = cv::Vec3s(0, 0, 0);
-            uint8_t foregroundClusterSize = 0;
-            uint8_t backgroundClusterSize = 0;
-
-            for (int32_t localY = 0; localY < 4; localY++) {
-                for (int32_t localX = 0; localX < 4; localX++) {
-                    auto& color = image.at<cv::Vec3b>(y + localY, x + localX);
-                    if (getColor(firstForeground, firstBackground, color)) {
-                        foregroundClusterSize++;
-                        secondForeground += color;
-                    } else {
-                        backgroundClusterSize++;
-                        secondBackground += color;
-                    }
-                }
-            }
-            secondForeground *= 1.0 / foregroundClusterSize;
-            secondBackground *= 1.0 / backgroundClusterSize;
-
-            uint16_t convolutionFull = 0x0;
-            for (int32_t localY = 0; localY < 4; localY++) {
-                for (int32_t localX = 0; localX < 4; localX++) {
-                    const int32_t index = localY * 4 + localX;
-                    convolutionFull += getColor(
-                        secondForeground,
-                        secondBackground,
-                        image.at<cv::Vec3b>(y + localY, x + localX)
-                    ) << index;
-                }
-            }
-
-            auto [symbol, needSwap] = symbolByConvolutionFull(
-                convolutionFull,
-                foregroundClusterSize,
-                backgroundClusterSize
-            );
-            if (needSwap) {
-                std::swap(secondForeground, secondBackground);
-            }
-
-            // \x1b[38;2;<R>;<G>;<B>m\x1b[48;2;<R>;<G>;<B>m<SYMBOL>
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset + (x / 4) *
-                FULL_SYMBOL_SIZE,
-                "\x1b[38;2;",
-                7
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 7,
-                colorToText(secondForeground[2]),
-                3
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 10,
-                ";",
-                1
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 11,
-                colorToText(secondForeground[1]),
-                3
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 14,
-                ";",
-                1
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 15,
-                colorToText(secondForeground[0]),
-                3
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 18,
-                "m\x1b[48;2;",
-                8
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 26,
-                colorToText(secondBackground[2]),
-                3
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 29,
-                ";",
-                1
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 30,
-                colorToText(secondBackground[1]),
-                3
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 33,
-                ";",
-                1
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 34,
-                colorToText(secondBackground[0]),
-                3
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 37,
-                "m",
-                1
-            );
-            std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-                (x / 4) * FULL_SYMBOL_SIZE + 38,
-                symbol,
-                3
-            );
-        }
-
-        // Reset color mode and end line
-        std::memcpy(
-            buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * FULL_SYMBOL_SIZE + 7) + horizontalOffset +
-            (image.cols / 4) * FULL_SYMBOL_SIZE,
-            "\x1b[0;0m\n",
-            7
-        );
-    }
-}
+#include "FrameRenderer.hpp"
 
 // 16 x 33 font size
 // 236 x 63 symbol resolution
@@ -213,7 +39,7 @@ int main(int argc, char* argv[]) {
     BufferedRandomGenerator::init();
 
     auto capture = cv::VideoCapture(argv[1]);
-    auto bufferedVideoCapture = ThreadedVideoCapture(capture);
+    auto bufferedVideoCapture = BufferedVideoCapture(capture);
     const auto frameRate = capture.get(cv::CAP_PROP_FPS);
     const auto frameDuration = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / frameRate));
 
@@ -223,8 +49,6 @@ int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 
-    const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD ret;
 #endif _WIN32
 
     std::cout << "\x1b[?25l"; // Hide cursor
@@ -232,7 +56,7 @@ int main(int argc, char* argv[]) {
     int32_t previousColumns = -1;
     int32_t previousRows = -1;
     TextFrameBuffer* textFrameBuffer = nullptr;
-    TextWriter* textWriter = nullptr;
+    FrameWriter* textWriter = nullptr;
 
 #ifdef _WIN32
     auto executableDir = std::filesystem::path(argv[0]).parent_path();
@@ -300,12 +124,11 @@ int main(int argc, char* argv[]) {
             symbolWidth = static_cast<int32_t>(rows / frameAspectRatio * (33.0 / 16.0));
         }
 
-        const int32_t bufferSize = ((columns - symbolWidth) / 2 + FULL_SYMBOL_SIZE * symbolWidth + 7) * symbolHeight +
-                                   1;
+        const int32_t bufferSize = ((columns - symbolWidth) / 2 + FrameRenderer::getSymbolSize() * symbolWidth + 7) * symbolHeight + 1;
 
         if (textFrameBuffer == nullptr) {
             textFrameBuffer = new TextFrameBuffer(bufferSize);
-            textWriter = new TextWriter(beginPlayTime, textFrameBuffer);
+            textWriter = new FrameWriter(beginPlayTime, textFrameBuffer);
         }
         if (previousColumns != columns || previousRows != rows) {
             textFrameBuffer->resize(bufferSize);
@@ -323,7 +146,7 @@ int main(int argc, char* argv[]) {
         cv::resize(frame, frame, cv::Size(symbolWidth * 4, symbolHeight * 4));
 
         auto renderFrame = textFrameBuffer->getRenderFrame();
-        imageToTextFull(frame, (columns - symbolWidth) / 2, renderFrame->getBuffer());
+        FrameRenderer::redner(frame, (columns - symbolWidth) / 2, renderFrame->getBuffer());
         auto endRenderTime = std::chrono::high_resolution_clock::now();
         renderFrame->updateFrame(
             frameIndex++,

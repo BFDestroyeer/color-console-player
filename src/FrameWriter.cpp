@@ -1,4 +1,4 @@
-#include "TextWriter.hpp"
+#include "FrameWriter.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -7,7 +7,7 @@
 #include <Windows.h>
 #endif _WIN32
 
-TextWriter::TextWriter(
+FrameWriter::FrameWriter(
     std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime,
     TextFrameBuffer* textFrameBuffer
 )
@@ -44,11 +44,11 @@ TextWriter::TextWriter(
                 std::cout << "\x1b[0;0m";
                 std::cout << std::format("\x1b[{};0H", frame->getSymbolHeight() + 1);
                 std::cout << "Frame time: " << std::format(
-                            "{:10.3f}",
-                            std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6
-                        )
-                        << " Render time: " << std::format("{:10.3f}", frame->getRenderTime().count() / 1e6)
-                        << " Skipped frames: " << std::format("{:7d}", skippedFramesCount);
+                    "{:10.3f}",
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6
+                );
+                std::cout << " Render time: " << std::format("{:10.3f}", frame->getRenderTime().count() / 1e6);
+                std::cout << " Skipped frames: " << std::format("{:7d}", skippedFramesCount);
             }
         }
     ).detach();

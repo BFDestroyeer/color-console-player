@@ -1,10 +1,8 @@
 #pragma once
 
-#include <thread>
-
 #include <opencv2/opencv.hpp>
 
-class ThreadedVideoCapture {
+class BufferedVideoCapture {
 private:
     cv::VideoCapture& videoCapture;
 
@@ -15,7 +13,7 @@ private:
     volatile bool isFrameReady;
 
 public:
-    explicit ThreadedVideoCapture(cv::VideoCapture& videoCapture);
+    explicit BufferedVideoCapture(cv::VideoCapture& videoCapture);
 
     bool read(cv::Mat& outputFrame, double& outputPosition);
 };

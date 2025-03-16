@@ -33,7 +33,7 @@ void TextFrameBuffer::resize(size_t bufferSize) {
     readyFrame.store(std::make_shared<TextFrame>(bufferSize));
 }
 
-std::shared_ptr<TextFrame> TextFrameBuffer::getRenderFrame() {
+void TextFrameBuffer::swapRenderAndReadyFrame() {
     std::shared_ptr<TextFrame> localReadyFrame;
     while (true) {
         localReadyFrame = readyFrame.load();
@@ -46,10 +46,9 @@ std::shared_ptr<TextFrame> TextFrameBuffer::getRenderFrame() {
         }
     }
     renderFrame.store(localReadyFrame);
-    return localReadyFrame;
 }
 
-std::shared_ptr<TextFrame> TextFrameBuffer::getWriteFrame() {
+void TextFrameBuffer::swapWriteAndReadyFrame() {
     std::shared_ptr<TextFrame> localReadyFrame;
     while (true) {
         localReadyFrame = readyFrame.load();
@@ -65,5 +64,12 @@ std::shared_ptr<TextFrame> TextFrameBuffer::getWriteFrame() {
         }
     }
     writeFrame.store(localReadyFrame);
-    return localReadyFrame;
+}
+
+std::shared_ptr<TextFrame> TextFrameBuffer::getRenderFrame() const {
+    return renderFrame.load();
+}
+
+std::shared_ptr<TextFrame> TextFrameBuffer::getWriteFrame() const {
+    return writeFrame.load();
 }

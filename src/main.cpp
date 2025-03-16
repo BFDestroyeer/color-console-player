@@ -155,10 +155,10 @@ int main(int argc, char* argv[]) {
             std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginRenderTime),
             symbolHeight
         );
+        textFrameBuffer->swapRenderAndReadyFrame();
         std::swap(frame, previousFrame);
 
-        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
-               framePosition < std::chrono::nanoseconds::zero()) {
+        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition < std::chrono::nanoseconds::zero()) {
         }
     }
     return EXIT_SUCCESS;

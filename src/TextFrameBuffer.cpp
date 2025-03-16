@@ -1,12 +1,12 @@
 #include "TextFrameBuffer.hpp"
 
-TextFrameBuffer::TextFrameBuffer(size_t bufferSize, size_t differentialBufferSize) {
-    renderFrame.store(std::make_shared<TextFrame>(bufferSize, differentialBufferSize));
-    readyFrame.store(std::make_shared<TextFrame>(bufferSize, differentialBufferSize));
-    writeFrame.store(std::make_shared<TextFrame>(bufferSize, differentialBufferSize));
+TextFrameBuffer::TextFrameBuffer(size_t bufferSize) {
+    renderFrame.store(std::make_shared<TextFrame>(bufferSize));
+    readyFrame.store(std::make_shared<TextFrame>(bufferSize));
+    writeFrame.store(std::make_shared<TextFrame>(bufferSize));
 }
 
-void TextFrameBuffer::resize(size_t bufferSize, size_t differentialBufferSize) {
+void TextFrameBuffer::resize(size_t bufferSize) {
     while (true) {
         std::shared_ptr<TextFrame> localReadyFrame = readyFrame.load();
         if (readyFrame.compare_exchange_strong(localReadyFrame, nullptr)) {
@@ -20,7 +20,7 @@ void TextFrameBuffer::resize(size_t bufferSize, size_t differentialBufferSize) {
             break;
         }
     }
-    renderFrame.store(std::make_shared<TextFrame>(bufferSize, differentialBufferSize));
+    renderFrame.store(std::make_shared<TextFrame>(bufferSize));
 
     while (true) {
         std::shared_ptr<TextFrame> localWriteFrame = writeFrame.load();
@@ -28,9 +28,9 @@ void TextFrameBuffer::resize(size_t bufferSize, size_t differentialBufferSize) {
             break;
         }
     }
-    writeFrame.store(std::make_shared<TextFrame>(bufferSize, differentialBufferSize));
+    writeFrame.store(std::make_shared<TextFrame>(bufferSize));
 
-    readyFrame.store(std::make_shared<TextFrame>(bufferSize, differentialBufferSize));
+    readyFrame.store(std::make_shared<TextFrame>(bufferSize));
 }
 
 std::shared_ptr<TextFrame> TextFrameBuffer::getRenderFrame() {

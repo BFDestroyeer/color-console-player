@@ -23,11 +23,7 @@ TextWriter::TextWriter(
                 const auto frame = this->textFrameBuffer->getWriteFrame();
 #ifdef _WIN32
                 SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), {0, 0});
-                if (frame->getIsFullRedraw()) {
-                    WriteConsoleA(consoleOutput, frame->getBuffer(), frame->getBufferSize(), &ret, nullptr);
-                } else {
-                    WriteConsoleA(consoleOutput, frame->getDifferentialBuffer(), frame->getDifferentialRealSize(), &ret, nullptr);
-                }
+                WriteConsoleA(consoleOutput, frame->getBuffer(), frame->getBufferSize(), &ret, nullptr);
                 while (std::chrono::duration_cast<std::chrono::nanoseconds>(
                            std::chrono::high_resolution_clock::now() - this->beginPlayTime
                        ) -
@@ -37,11 +33,7 @@ TextWriter::TextWriter(
 #endif _WIN32
 #ifdef __unix__
             std::cout << "\x1b[0;0H";
-            if (needFullRedraw) {
-                std::fwrite(buffer, bufferSize, 1, stdout);
-            } else {
-                std::fwrite(differentialBuffer, differentialRealSize, 1, stdout);
-            }
+            std::fwrite(buffer, bufferSize, 1, stdout);
             std::fflush(stdout);
 #endif __unix__
                 if (previousFrameIndex != 0 && previousFrameIndex + 1 != frame->getFrameIndex()) {

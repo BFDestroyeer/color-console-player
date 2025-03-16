@@ -11,9 +11,9 @@ private:
     std::atomic<std::shared_ptr<TextFrame>> writeFrame;
 
 public:
-    explicit TextFrameBuffer(size_t bufferSize, size_t differentialBufferSize);
+    explicit TextFrameBuffer(size_t bufferSize);
 
-    void resize(size_t bufferSize, size_t differentialBufferSize);
+    void resize(size_t bufferSize);
 
     std::shared_ptr<TextFrame> getRenderFrame();
 

@@ -72,6 +72,7 @@ int main(int argc, char* argv[]) {
     std::cout << "\x1b[2J";
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();
 
+#ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
     std::thread(
@@ -87,11 +88,12 @@ int main(int argc, char* argv[]) {
             }
         }
     ).detach();
+#endif _WIN32
 
     uint64_t frameIndex = 0;
     while (true) {
-#ifdef _WIN32
         auto beginRenderTime = std::chrono::high_resolution_clock::now();
+#ifdef _WIN32
         const int32_t columns = consoleScreenBufferInfo.srWindow.Right - consoleScreenBufferInfo.srWindow.Left + 1;
         const int32_t rows = consoleScreenBufferInfo.srWindow.Bottom - consoleScreenBufferInfo.srWindow.Top;
 #endif _WIN32
@@ -137,7 +139,7 @@ int main(int argc, char* argv[]) {
             std::system("cls");
 #endif _WIN32
 #ifdef __unix__
-            std::cout << "x1b[2J";
+            std::system("clear");
 #endif __unix__
         }
         previousColumns = columns;

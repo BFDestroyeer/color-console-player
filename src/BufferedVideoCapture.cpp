@@ -1,5 +1,7 @@
 #include "BufferedVideoCapture.hpp"
 
+#include <thread>
+
 BufferedVideoCapture::BufferedVideoCapture(cv::VideoCapture& videoCapture) : videoCapture(videoCapture) {
     isFrameReady = false;
     std::thread(

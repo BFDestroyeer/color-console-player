@@ -2,6 +2,10 @@
 
 #include <thread>
 
+#ifdef __unix__
+#include <sys/ioctl.h>
+#endif __unix__
+
 ConsoleSizeRecorder::ConsoleSizeRecorder() {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO initialConsoleScreenBufferInfo;
@@ -34,13 +38,15 @@ std::pair<int16_t, int16_t> ConsoleSizeRecorder::getConsoleSize() const {
 #ifdef __unix__
     winsize windowSize{};
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize);
-    return std::make_pair(windowSize.ws_col, windowSize.ws_row - 1)
+    return std::make_pair(windowSize.ws_col, windowSize.ws_row - 1);
 #endif __unix__
 }
 
+#ifdef _WIN32
 std::pair<int16_t, int16_t> ConsoleSizeRecorder::extractConsoleSize(const CONSOLE_SCREEN_BUFFER_INFO& consoleScreenBufferInfo) {
     return std::make_pair(
         consoleScreenBufferInfo.srWindow.Right - consoleScreenBufferInfo.srWindow.Left + 1,
         consoleScreenBufferInfo.srWindow.Bottom - consoleScreenBufferInfo.srWindow.Top
     );
 }
+#endif _WIN32

@@ -19,6 +19,7 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "ConsoleSizeRecorder.hpp"
 #include "FrameRenderer.hpp"
 
 // 16 x 33 font size
@@ -46,6 +47,8 @@ int main(int argc, char* argv[]) {
     auto frame = cv::Mat();
     auto previousFrame = cv::Mat();
 
+    ConsoleSizeRecorder consoleSizeRecorder;
+
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 
@@ -72,37 +75,9 @@ int main(int argc, char* argv[]) {
     std::cout << "\x1b[2J";
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();
 
-#ifdef _WIN32
-    CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo;
-    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
-    std::thread(
-        [&consoleScreenBufferInfo] {
-            const auto consoleInput = GetStdHandle(STD_INPUT_HANDLE);
-            INPUT_RECORD inputRecord;
-            DWORD readCount;
-            while (true) {
-                ReadConsoleInput(consoleInput, &inputRecord, 1, &readCount);
-                if (inputRecord.EventType == WINDOW_BUFFER_SIZE_EVENT) {
-                    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &consoleScreenBufferInfo);
-                }
-            }
-        }
-    ).detach();
-#endif _WIN32
-
     uint64_t frameIndex = 0;
     while (true) {
         auto beginRenderTime = std::chrono::high_resolution_clock::now();
-#ifdef _WIN32
-        const int32_t columns = consoleScreenBufferInfo.srWindow.Right - consoleScreenBufferInfo.srWindow.Left + 1;
-        const int32_t rows = consoleScreenBufferInfo.srWindow.Bottom - consoleScreenBufferInfo.srWindow.Top;
-#endif _WIN32
-#ifdef __unix__
-        winsize windowSize{};
-        ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize);
-        const int32_t columns = windowSize.ws_col;
-        const int32_t rows = windowSize.ws_row - 1;
-#endif __unix__
 
         double capturePosition;
         if (!bufferedVideoCapture.read(frame, capturePosition)) {
@@ -113,6 +88,8 @@ int main(int argc, char* argv[]) {
         if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
             continue;
         }
+
+        auto [columns, rows] = consoleSizeRecorder.getConsoleSize();
 
         const double screenHeight = rows * 33;
         const double screenWidth = columns * 16;

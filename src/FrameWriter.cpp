@@ -9,10 +9,16 @@
 #endif _WIN32
 
 FrameWriter::FrameWriter(
-    std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime,
-    TextFrameBuffer* textFrameBuffer
+    const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
+    const std::shared_ptr<TextFrameBuffer>& textFrameBuffer
 )
-    : beginPlayTime(beginPlayTime), textFrameBuffer(textFrameBuffer) {
+    : beginPlayTime(beginPlayTime),
+      textFrameBuffer(textFrameBuffer) {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif _WIN32
+    std::cout << "\x1b[?25l"; // Hide cursor
+
     std::thread(
         [this] {
 #ifdef _WIN32
@@ -41,7 +47,8 @@ FrameWriter::FrameWriter(
                     skippedFramesCount += frame->getFrameIndex() - previousFrameIndex - 1;
                 }
                 previousFrameIndex = frame->getFrameIndex();
-                while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - this->beginPlayTime) - frame->getFramePosition() <
+                while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - this->beginPlayTime)
+                       - frame->getFramePosition() <
                        std::chrono::nanoseconds::zero()) {
                 }
                 auto endFrameTime = std::chrono::high_resolution_clock::now();

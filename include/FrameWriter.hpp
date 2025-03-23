@@ -6,9 +6,12 @@
 
 class FrameWriter {
 private:
-    std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime;
-    TextFrameBuffer* textFrameBuffer;
+    const std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime;
+    const std::shared_ptr<TextFrameBuffer> textFrameBuffer;
 
 public:
-    FrameWriter(std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime, TextFrameBuffer* textFrameBuffer);
+    FrameWriter(
+        const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
+        const std::shared_ptr<TextFrameBuffer>& textFrameBuffer
+    );
 };

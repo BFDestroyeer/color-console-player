@@ -2,20 +2,39 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "BufferedVideoCapture.hpp"
+#include "ConsoleSizeRecorder.hpp"
+#include "TextFrameBuffer.hpp"
+
 class FrameRenderer {
 private:
-    static constexpr int64_t SYMBOL_SIZE = 41;
+    static constexpr int32_t SYMBOL_SIZE = 41;
+
+    const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime;
+
+    const std::shared_ptr<ConsoleSizeRecorder> consoleSizeRecorder;
+    const std::shared_ptr<TextFrameBuffer> textFrameBuffer;
+    const std::shared_ptr<cv::VideoCapture> videoCapture;
+
+    BufferedVideoCapture bufferedVideoCapture;
 
 public:
-    static int64_t getSymbolSize();
+    FrameRenderer(
+        const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
+        const std::shared_ptr<ConsoleSizeRecorder>& consoleSizeRecorder,
+        const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
+        const std::shared_ptr<cv::VideoCapture>& videoCapture
+    );
 
-    static void redner(
+    void start();
+
+private:
+    static void imageToText(
         const cv::Mat& image,
         uint64_t horizontalOffset,
         uint8_t* buffer
     );
 
-private:
     inline static uint16_t getColor(const cv::Vec3s& foreground, const cv::Vec3s& background, const cv::Vec3s& color);
 
     inline static const char* colorToText(uint8_t color);

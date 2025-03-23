@@ -4,7 +4,7 @@
 
 class BufferedVideoCapture {
 private:
-    cv::VideoCapture& videoCapture;
+    std::shared_ptr<cv::VideoCapture> videoCapture;
 
     cv::Mat frame;
     double position;
@@ -13,7 +13,7 @@ private:
     volatile bool isFrameReady;
 
 public:
-    explicit BufferedVideoCapture(cv::VideoCapture& videoCapture);
+    explicit BufferedVideoCapture(const std::shared_ptr<cv::VideoCapture>& videoCapture);
 
     bool read(cv::Mat& outputFrame, double& outputPosition);
 };

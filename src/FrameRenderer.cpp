@@ -1,10 +1,92 @@
 #include "FrameRenderer.hpp"
 
-int64_t FrameRenderer::getSymbolSize() {
-    return SYMBOL_SIZE;
+FrameRenderer::FrameRenderer(
+    const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
+    const std::shared_ptr<ConsoleSizeRecorder>& consoleSizeRecorder,
+    const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
+    const std::shared_ptr<cv::VideoCapture>& videoCapture
+) : beginPlayTime(beginPlayTime),
+    consoleSizeRecorder(consoleSizeRecorder),
+    textFrameBuffer(textFrameBuffer),
+    videoCapture(videoCapture),
+    bufferedVideoCapture(videoCapture) {
 }
 
-void FrameRenderer::redner(
+void FrameRenderer::start() {
+    auto frame = cv::Mat();
+    auto previousFrame = cv::Mat();
+
+    int32_t previousColumns = -1;
+    int32_t previousRows = -1;
+
+    const auto frameRate = videoCapture->get(cv::CAP_PROP_FPS);
+    const auto frameDuration = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / frameRate));
+
+    uint64_t frameIndex = 0;
+    while (true) {
+        auto beginRenderTime = std::chrono::high_resolution_clock::now();
+
+        double capturePosition;
+        if (!bufferedVideoCapture.read(frame, capturePosition)) {
+            break;
+        }
+        const auto framePosition =
+                std::chrono::duration<int64_t, std::ratio<1, 1000000000> >(static_cast<int64_t>(capturePosition * 1e6));
+        if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
+            continue;
+        }
+
+        auto [columns, rows] = consoleSizeRecorder->getConsoleSize();
+
+        const double screenHeight = rows * 33;
+        const double screenWidth = columns * 16;
+        const double frameAspectRatio = static_cast<double>(frame.rows) / static_cast<double>(frame.cols);
+        int32_t symbolHeight, symbolWidth;
+        if (screenHeight / screenWidth > frameAspectRatio) {
+            symbolHeight = static_cast<int32_t>(columns * frameAspectRatio * (16.0 / 33.0));
+            symbolWidth = columns;
+        } else {
+            symbolHeight = rows;
+            symbolWidth = static_cast<int32_t>(rows / frameAspectRatio * (33.0 / 16.0));
+        }
+
+        const int32_t bufferSize = ((columns - symbolWidth) / 2 + SYMBOL_SIZE * symbolWidth + 7) * symbolHeight + 1;
+
+        if (previousColumns != columns || previousRows != rows) {
+            textFrameBuffer->resize(bufferSize);
+            previousFrame = cv::Mat();
+#ifdef _WIN32
+            std::system("cls");
+#endif _WIN32
+#ifdef __unix__
+            std::system("clear");
+#endif __unix__
+        }
+        previousColumns = columns;
+        previousRows = rows;
+
+        cv::resize(frame, frame, cv::Size(symbolWidth * 4, symbolHeight * 4));
+
+        auto renderFrame = textFrameBuffer->getRenderFrame();
+        imageToText(frame, (columns - symbolWidth) / 2, renderFrame->getBuffer());
+        auto endRenderTime = std::chrono::high_resolution_clock::now();
+        renderFrame->updateFrame(
+            frameIndex++,
+            frameDuration,
+            framePosition,
+            std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginRenderTime),
+            symbolHeight
+        );
+        textFrameBuffer->swapRenderAndReadyFrame();
+        std::swap(frame, previousFrame);
+
+        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
+               framePosition < std::chrono::nanoseconds::zero()) {
+        }
+    }
+}
+
+void FrameRenderer::imageToText(
     const cv::Mat& image,
     const uint64_t horizontalOffset,
     uint8_t* buffer

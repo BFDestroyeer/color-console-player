@@ -14,7 +14,7 @@ private:
     int32_t symbolHeight;
 
 public:
-    TextFrame(size_t bufferSize);
+    explicit TextFrame(size_t bufferSize);
 
     ~TextFrame();
 

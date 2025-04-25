@@ -57,10 +57,10 @@ void FrameRenderer::start() {
             previousFrame = cv::Mat();
 #ifdef _WIN32
             std::system("cls");
-#endif _WIN32
-#ifdef __unix__
+#endif
+#if defined(__unix__) || defined(__APPLE__)
             std::system("clear");
-#endif __unix__
+#endif
         }
         previousColumns = columns;
         previousRows = rows;

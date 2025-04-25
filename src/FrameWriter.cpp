@@ -6,7 +6,7 @@
 
 #ifdef _WIN32
 #include <Windows.h>
-#endif _WIN32
+#endif
 
 FrameWriter::FrameWriter(
     const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
@@ -16,7 +16,7 @@ FrameWriter::FrameWriter(
       textFrameBuffer(textFrameBuffer) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
-#endif _WIN32
+#endif
     std::cout << "\x1b[?25l"; // Hide cursor
 
     std::thread(
@@ -24,7 +24,7 @@ FrameWriter::FrameWriter(
 #ifdef _WIN32
             const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
             DWORD ret;
-#endif _WIN32
+#endif
             uint64_t previousFrameIndex = 0;
             uint64_t skippedFramesCount = 0;
             while (true) {
@@ -35,12 +35,12 @@ FrameWriter::FrameWriter(
 #ifdef _WIN32
                 SetConsoleCursorPosition(consoleOutput, {0, 0});
                 WriteConsoleA(consoleOutput, frame->getBuffer(), frame->getBufferSize(), &ret, nullptr);
-#endif _WIN32
-#ifdef __unix__
+#endif
+#if defined(__unix__) || defined(__APPLE__)
                 std::cout << "\x1b[0;0H";
                 std::fwrite(frame->getBuffer(), frame->getBufferSize(), 1, stdout);
                 std::fflush(stdout);
-#endif __unix__
+#endif
                 std::cout << "\x1b[0;0m";
                 auto endWriteTime = std::chrono::high_resolution_clock::now();
                 if (previousFrameIndex != 0) {

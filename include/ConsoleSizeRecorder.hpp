@@ -5,13 +5,13 @@
 
 #ifdef _WIN32
 #include <Windows.h>
-#endif _WIN32
+#endif
 
 class ConsoleSizeRecorder {
 private:
 #ifdef _WIN32
     std::atomic<std::pair<int16_t, int16_t>> consoleSize;
-#endif _WIN32
+#endif
 
 public:
     ConsoleSizeRecorder();
@@ -22,5 +22,5 @@ public:
 private:
 #ifdef _WIN32
     static std::pair<int16_t, int16_t> extractConsoleSize(const CONSOLE_SCREEN_BUFFER_INFO& consoleScreenBufferInfo);
-#endif _WIN32
+#endif
 };

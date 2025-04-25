@@ -2,9 +2,9 @@
 
 #include <thread>
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 #include <sys/ioctl.h>
-#endif __unix__
+#endif
 
 ConsoleSizeRecorder::ConsoleSizeRecorder() {
 #ifdef _WIN32
@@ -28,18 +28,18 @@ ConsoleSizeRecorder::ConsoleSizeRecorder() {
             }
         }
     ).detach();
-#endif _WIN32
+#endif
 }
 
 std::pair<int16_t, int16_t> ConsoleSizeRecorder::getConsoleSize() const {
 #ifdef _WIN32
     return consoleSize.load();
-#endif _WIN32
-#ifdef __unix__
+#endif
+#if defined(__unix__) || defined(__APPLE__)
     winsize windowSize{};
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize);
     return std::make_pair(windowSize.ws_col, windowSize.ws_row - 1);
-#endif __unix__
+#endif
 }
 
 #ifdef _WIN32
@@ -49,4 +49,4 @@ std::pair<int16_t, int16_t> ConsoleSizeRecorder::extractConsoleSize(const CONSOL
         consoleScreenBufferInfo.srWindow.Bottom - consoleScreenBufferInfo.srWindow.Top
     );
 }
-#endif _WIN32
+#endif

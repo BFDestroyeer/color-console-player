@@ -29,8 +29,8 @@ int main(int argc, char* argv[]) {
         std::format("{}\\ffplay.exe \"{}\" -nodisp -autoexit -loglevel quiet", executableDir.string(), argv[1]).c_str(),
         "r"
     );
-#endif _WIN32
-#ifdef __unix__
+#endif
+#if defined(__unix__) || defined(__APPLE__)
     popen(std::format("ffplay \"{}\" -nodisp -autoexit -loglevel quiet", argv[1]).c_str(), "r");
 #endif
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();

@@ -1,6 +1,5 @@
 #include <filesystem>
 
-#include "BufferedRandomGenerator.hpp"
 #include "FrameWriter.hpp"
 #include "TextFrameBuffer.hpp"
 
@@ -21,7 +20,6 @@ int main(int argc, char* argv[]) {
         std::cout << "File " << argv[1] << " does not exist" << std::endl;
         return EXIT_FAILURE;
     }
-    BufferedRandomGenerator::init();
 
 #ifdef _WIN32
     const auto executableDir = std::filesystem::path(argv[0]).parent_path();

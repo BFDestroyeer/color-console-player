@@ -1,75 +1,75 @@
 #include "TextFrameBuffer.hpp"
 
 TextFrameBuffer::TextFrameBuffer(size_t bufferSize) {
-    renderFrame.store(std::make_shared<TextFrame>(bufferSize));
-    readyFrame.store(std::make_shared<TextFrame>(bufferSize));
-    writeFrame.store(std::make_shared<TextFrame>(bufferSize));
+    renderFrame = std::make_shared<TextFrame>(bufferSize);
+    readyFrame = std::make_shared<TextFrame>(bufferSize);
+    writeFrame = std::make_shared<TextFrame>(bufferSize);
 }
 
 void TextFrameBuffer::resize(size_t bufferSize) {
     while (true) {
-        std::shared_ptr<TextFrame> localReadyFrame = readyFrame.load();
-        if (readyFrame.compare_exchange_strong(localReadyFrame, nullptr)) {
+        std::shared_ptr<TextFrame> localReadyFrame = std::atomic_load(&readyFrame);
+        if (std::atomic_compare_exchange_strong(&readyFrame, &localReadyFrame, static_cast<std::shared_ptr<TextFrame>>(nullptr))) {
             break;
         }
     }
 
     while (true) {
-        std::shared_ptr<TextFrame> localRenderFrame = renderFrame.load();
-        if (renderFrame.compare_exchange_strong(localRenderFrame, nullptr)) {
+        std::shared_ptr<TextFrame> localRenderFrame = std::atomic_load(&renderFrame);
+        if (std::atomic_compare_exchange_strong(&renderFrame, &localRenderFrame, static_cast<std::shared_ptr<TextFrame>>(nullptr))) {
             break;
         }
     }
-    renderFrame.store(std::make_shared<TextFrame>(bufferSize));
+    std::atomic_store(&renderFrame, std::make_shared<TextFrame>(bufferSize));
 
     while (true) {
-        std::shared_ptr<TextFrame> localWriteFrame = writeFrame.load();
-        if (writeFrame.compare_exchange_strong(localWriteFrame, nullptr)) {
+        std::shared_ptr<TextFrame> localWriteFrame = std::atomic_load(&writeFrame);
+        if (std::atomic_compare_exchange_strong(&writeFrame, &localWriteFrame, static_cast<std::shared_ptr<TextFrame>>(nullptr))) {
             break;
         }
     }
-    writeFrame.store(std::make_shared<TextFrame>(bufferSize));
+    std::atomic_store(&writeFrame, std::make_shared<TextFrame>(bufferSize));
 
-    readyFrame.store(std::make_shared<TextFrame>(bufferSize));
+    std::atomic_store(&readyFrame, std::make_shared<TextFrame>(bufferSize));
 }
 
 void TextFrameBuffer::swapRenderAndReadyFrame() {
     std::shared_ptr<TextFrame> localReadyFrame;
     while (true) {
-        localReadyFrame = readyFrame.load();
-        auto localRenderFrame = renderFrame.load();
+        localReadyFrame = std::atomic_load(&readyFrame);
+        auto localRenderFrame = std::atomic_load(&renderFrame);
         if (localReadyFrame == nullptr || localRenderFrame == nullptr) {
             continue;
         }
-        if (readyFrame.compare_exchange_strong(localReadyFrame, localRenderFrame)) {
+        if (std::atomic_compare_exchange_strong(&readyFrame, &localReadyFrame, localRenderFrame)) {
             break;
         }
     }
-    renderFrame.store(localReadyFrame);
+    std::atomic_store(&renderFrame, localReadyFrame);
 }
 
 void TextFrameBuffer::swapWriteAndReadyFrame() {
     std::shared_ptr<TextFrame> localReadyFrame;
     while (true) {
-        localReadyFrame = readyFrame.load();
-        auto localWriteFrame = writeFrame.load();
+        localReadyFrame = std::atomic_load(&readyFrame);
+        auto localWriteFrame = std::atomic_load(&writeFrame);
         if (localReadyFrame == nullptr || localWriteFrame == nullptr) {
             continue;
         }
         if (localWriteFrame->getFrameIndex() >= localReadyFrame->getFrameIndex()) {
             continue;
         }
-        if (readyFrame.compare_exchange_strong(localReadyFrame, localWriteFrame)) {
+        if (std::atomic_compare_exchange_strong(&readyFrame, &localReadyFrame, localWriteFrame)) {
             break;
         }
     }
-    writeFrame.store(localReadyFrame);
+    std::atomic_store(&writeFrame, localReadyFrame);
 }
 
 std::shared_ptr<TextFrame> TextFrameBuffer::getRenderFrame() const {
-    return renderFrame.load();
+    return std::atomic_load(&renderFrame);
 }
 
 std::shared_ptr<TextFrame> TextFrameBuffer::getWriteFrame() const {
-    return writeFrame.load();
+    return std::atomic_load(&writeFrame);
 }

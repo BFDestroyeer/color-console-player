@@ -4,6 +4,7 @@
 
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/ioctl.h>
+#include <unistd.h>
 #endif
 
 ConsoleSizeRecorder::ConsoleSizeRecorder() {

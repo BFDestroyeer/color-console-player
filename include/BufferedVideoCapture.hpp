@@ -1,22 +1,19 @@
 #pragma once
 
-#include <thread>
-
 #include <opencv2/opencv.hpp>
 
-class ThreadedVideoCapture {
+class BufferedVideoCapture {
 private:
-    cv::VideoCapture& videoCapture;
+    std::shared_ptr<cv::VideoCapture> videoCapture;
 
     cv::Mat frame;
     double position;
     bool frameReadResult;
 
-    std::thread thread;
     volatile bool isFrameReady;
 
 public:
-    explicit ThreadedVideoCapture(cv::VideoCapture& videoCapture);
+    explicit BufferedVideoCapture(const std::shared_ptr<cv::VideoCapture>& videoCapture);
 
     bool read(cv::Mat& outputFrame, double& outputPosition);
 };

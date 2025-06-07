@@ -1,4 +1,4 @@
-#include "ConsoleSizeRecorder.hpp"
+#include "ConsoleWindowSizeService.hpp"
 
 #include <thread>
 
@@ -7,11 +7,11 @@
 #include <unistd.h>
 #endif
 
-ConsoleSizeRecorder::ConsoleSizeRecorder() {
+ConsoleWindowSizeService::ConsoleWindowSizeService() {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO initialConsoleScreenBufferInfo;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &initialConsoleScreenBufferInfo);
-    consoleSize = extractConsoleSize(initialConsoleScreenBufferInfo);
+    consoleSize = extractConsoleWindowSize(initialConsoleScreenBufferInfo);
     std::thread(
         [this] {
             CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo;
@@ -23,7 +23,7 @@ ConsoleSizeRecorder::ConsoleSizeRecorder() {
                 ReadConsoleInput(consoleInput, &inputRecord, 1, &readCount);
                 if (inputRecord.EventType == WINDOW_BUFFER_SIZE_EVENT) {
                     GetConsoleScreenBufferInfo(consoleOutput, &consoleScreenBufferInfo);
-                    auto size = extractConsoleSize(consoleScreenBufferInfo);
+                    auto size = extractConsoleWindowSize(consoleScreenBufferInfo);
                     consoleSize.store(size);
                 }
             }
@@ -32,7 +32,7 @@ ConsoleSizeRecorder::ConsoleSizeRecorder() {
 #endif
 }
 
-std::pair<int16_t, int16_t> ConsoleSizeRecorder::getConsoleSize() const {
+std::pair<int16_t, int16_t> ConsoleWindowSizeService::getConsoleSize() const {
 #ifdef _WIN32
     return consoleSize.load();
 #endif
@@ -44,7 +44,7 @@ std::pair<int16_t, int16_t> ConsoleSizeRecorder::getConsoleSize() const {
 }
 
 #ifdef _WIN32
-std::pair<int16_t, int16_t> ConsoleSizeRecorder::extractConsoleSize(const CONSOLE_SCREEN_BUFFER_INFO& consoleScreenBufferInfo) {
+std::pair<int16_t, int16_t> ConsoleWindowSizeService::extractConsoleWindowSize(const CONSOLE_SCREEN_BUFFER_INFO& consoleScreenBufferInfo) {
     return std::make_pair(
         consoleScreenBufferInfo.srWindow.Right - consoleScreenBufferInfo.srWindow.Left + 1,
         consoleScreenBufferInfo.srWindow.Bottom - consoleScreenBufferInfo.srWindow.Top

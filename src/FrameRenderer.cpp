@@ -2,11 +2,11 @@
 
 FrameRenderer::FrameRenderer(
     const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
-    const std::shared_ptr<ConsoleSizeRecorder>& consoleSizeRecorder,
+    const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService,
     const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
     const std::shared_ptr<cv::VideoCapture>& videoCapture
 ) : beginPlayTime(beginPlayTime),
-    consoleSizeRecorder(consoleSizeRecorder),
+    consoleWindowSizeService(consoleWindowSizeService),
     textFrameBuffer(textFrameBuffer),
     videoCapture(videoCapture),
     bufferedVideoCapture(videoCapture) {
@@ -36,7 +36,7 @@ void FrameRenderer::start() {
             continue;
         }
 
-        auto [columns, rows] = consoleSizeRecorder->getConsoleSize();
+        auto [columns, rows] = consoleWindowSizeService->getConsoleSize();
 
         const double screenHeight = rows * 33;
         const double screenWidth = columns * 16;
@@ -72,7 +72,6 @@ void FrameRenderer::start() {
         auto endRenderTime = std::chrono::high_resolution_clock::now();
         renderFrame->updateFrame(
             frameIndex++,
-            frameDuration,
             framePosition,
             std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginRenderTime),
             symbolHeight
@@ -94,14 +93,14 @@ void FrameRenderer::imageToText(
 #pragma omp parallel for num_threads(4)
     for (int32_t y = 0; y < image.rows; y += 4) {
         for (int32_t x = 0; x < image.cols; x += 4) {
-            auto firstForeground = image.at<cv::Vec3b>(y, x);
-            auto firstBackground = image.at<cv::Vec3b>(y + 3, x + 3);
+            auto firstForeground = cv::Vec3s(0, 0, 0);
+            auto firstBackground = cv::Vec3s(0, 0, 0);
 
-            double maxNorm = DBL_MIN;
-            double minNorm = DBL_MAX;
+            double maxNorm = (std::numeric_limits<double>::min)();
+            double minNorm = (std::numeric_limits<double>::max)();
             for (int32_t localY = 0; localY < 4; localY++) {
                 for (int32_t localX = 0; localX < 4; localX++) {
-                    auto& color = image.at<cv::Vec3b>(y + localY, x + localX);
+                    const auto& color = image.at<cv::Vec3b>(y + localY, x + localX);
                     const auto colorNorm = cv::norm(color, cv::NORM_L2SQR);
                     if (colorNorm > maxNorm) {
                         maxNorm = colorNorm;
@@ -131,31 +130,36 @@ void FrameRenderer::imageToText(
                     }
                 }
             }
-            secondForeground *= 1.0 / foregroundClusterSize;
-            secondBackground *= 1.0 / backgroundClusterSize;
 
-            uint16_t convolutionFull = 0x0;
-            for (int32_t localY = 0; localY < 4; localY++) {
-                for (int32_t localX = 0; localX < 4; localX++) {
-                    const int32_t index = localY * 4 + localX;
-                    convolutionFull += getColor(
-                        secondForeground,
-                        secondBackground,
-                        image.at<cv::Vec3b>(y + localY, x + localX)
-                    ) << index;
+            uint16_t convolution = 0b0;
+            if (foregroundClusterSize != 0 && backgroundClusterSize != 0) {
+                secondForeground *= 1.0 / foregroundClusterSize;
+                secondBackground *= 1.0 / backgroundClusterSize;
+                for (int32_t localY = 0; localY < 4; localY++) {
+                    for (int32_t localX = 0; localX < 4; localX++) {
+                        const int32_t index = localY * 4 + localX;
+                        convolution += getColor(
+                                secondForeground,
+                                secondBackground,
+                                image.at<cv::Vec3b>(y + localY, x + localX)
+                        ) << index;
+                    }
                 }
+            } else if (foregroundClusterSize == 0) {
+                secondBackground *= 1.0 / backgroundClusterSize;
+                convolution = 0b0;
+            } else {
+                secondForeground *= 1.0 / foregroundClusterSize;
+                convolution = 0b1111'1111'1111'1111u;
             }
 
-            auto [symbol, needSwap] = symbolByConvolutionFull(
-                convolutionFull,
-                foregroundClusterSize,
-                backgroundClusterSize
-            );
+            auto [symbol, needSwap] = symbolByConvolutionFull(convolution);
             if (needSwap) {
                 std::swap(secondForeground, secondBackground);
             }
 
-            // \x1b[38;2;<R>;<G>;<B>m\x1b[48;2;<R>;<G>;<B>m<SYMBOL>
+            // <Foreground color><Background color><Symbol>
+            // \x1b[38;2;<Red>;<Green>;<Blue>m\x1b[48;2;<Red>;<Green>;<Blue>m<Symbol>
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset + (x / 4) *
                 SYMBOL_SIZE,
@@ -165,7 +169,7 @@ void FrameRenderer::imageToText(
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 7,
-                colorToText(secondForeground[2]),
+                unsignedToText(secondForeground[2]),
                 3
             );
             std::memcpy(
@@ -177,7 +181,7 @@ void FrameRenderer::imageToText(
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 11,
-                colorToText(secondForeground[1]),
+                unsignedToText(secondForeground[1]),
                 3
             );
             std::memcpy(
@@ -189,7 +193,7 @@ void FrameRenderer::imageToText(
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 15,
-                colorToText(secondForeground[0]),
+                unsignedToText(secondForeground[0]),
                 3
             );
             std::memcpy(
@@ -201,7 +205,7 @@ void FrameRenderer::imageToText(
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 26,
-                colorToText(secondBackground[2]),
+                unsignedToText(secondBackground[2]),
                 3
             );
             std::memcpy(
@@ -213,7 +217,7 @@ void FrameRenderer::imageToText(
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 30,
-                colorToText(secondBackground[1]),
+                unsignedToText(secondBackground[1]),
                 3
             );
             std::memcpy(
@@ -225,7 +229,7 @@ void FrameRenderer::imageToText(
             std::memcpy(
                 buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 34,
-                colorToText(secondBackground[0]),
+                unsignedToText(secondBackground[0]),
                 3
             );
             std::memcpy(
@@ -263,8 +267,8 @@ uint16_t FrameRenderer::getColor(
     return 0;
 }
 
-const char* FrameRenderer::colorToText(const uint8_t color) {
-    switch (color) {
+const char* FrameRenderer::unsignedToText(const uint8_t value) {
+    switch (value) {
         case 0:
             return "000";
         case 1:
@@ -782,19 +786,8 @@ const char* FrameRenderer::colorToText(const uint8_t color) {
     }
 }
 
-std::pair<const char*, bool> FrameRenderer::symbolByConvolutionFull(
-    const uint16_t convolution,
-    const int32_t foregroundClusterSize,
-    const int32_t backgroundClusterSize
-) {
-    if (foregroundClusterSize == 0) {
-        return std::make_pair("█", true);
-    }
-    if (backgroundClusterSize == 0) {
-        return std::make_pair("█", false);
-    }
-
-    int32_t min = 64;
+std::pair<const char*, bool> FrameRenderer::symbolByConvolutionFull(const uint16_t convolution) {
+    int32_t min = (std::numeric_limits<int32_t>::max)();
     auto symbol = "█";
     auto needSwap = true;
     //(3,3)(3,2)(3,1)(3,0)(2,3)(2,2)(2,1)(2,0)(1,3)(1,2)(1,1)(1,0)

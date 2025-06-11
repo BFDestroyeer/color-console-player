@@ -30,7 +30,7 @@ uint64_t TextFrame::getFrameIndex() const {
     return this->frameIndex;
 }
 
-std::chrono::duration<int64_t, std::ratio<1, 1000000000> > TextFrame::getFramePosition() const {
+std::chrono::duration<int64_t, std::ratio<1, 1000000000>> TextFrame::getFramePosition() const {
     return framePosition;
 }
 
@@ -45,7 +45,7 @@ int32_t TextFrame::getSymbolHeight() const {
 
 void TextFrame::updateFrame(
     const uint64_t frameIndex,
-    std::chrono::duration<int64_t, std::ratio<1, 1000000000> > framePosition,
+    std::chrono::duration<int64_t, std::ratio<1, 1000000000>> framePosition,
     std::chrono::nanoseconds renderTime,
     int32_t symbolHeight
 ) {

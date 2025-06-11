@@ -22,7 +22,7 @@ private:
     /**
      * @brief Frame position
      */
-    std::chrono::duration<int64_t, std::ratio<1, 1000000000> > framePosition;
+    std::chrono::duration<int64_t, std::ratio<1, 1000000000>> framePosition;
 
     /**
      * @brief Frame rendering time
@@ -68,7 +68,7 @@ public:
      * @return Frame position
      */
     [[nodiscard]]
-    std::chrono::duration<int64_t, std::ratio<1, 1000000000> > getFramePosition() const;
+    std::chrono::duration<int64_t, std::ratio<1, 1000000000>> getFramePosition() const;
 
     /**
      * @brief Get frame rendering time
@@ -93,7 +93,7 @@ public:
      */
     void updateFrame(
         uint64_t frameIndex,
-        std::chrono::duration<int64_t, std::ratio<1, 1000000000> > framePosition,
+        std::chrono::duration<int64_t, std::ratio<1, 1000000000>> framePosition,
         std::chrono::nanoseconds renderTime,
         int32_t symbolHeight
     );

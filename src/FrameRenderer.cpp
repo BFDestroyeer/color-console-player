@@ -31,7 +31,7 @@ void FrameRenderer::start() {
             break;
         }
         const auto framePosition =
-                std::chrono::duration<int64_t, std::ratio<1, 1000000000> >(static_cast<int64_t>(capturePosition * 1e6));
+                std::chrono::duration<int64_t, std::ratio<1, 1000000000>>(static_cast<int64_t>(capturePosition * 1e6));
         if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
             continue;
         }

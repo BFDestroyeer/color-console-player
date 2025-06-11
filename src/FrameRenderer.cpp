@@ -38,16 +38,16 @@ void FrameRenderer::start() {
 
         auto [columns, rows] = consoleWindowSizeService->getConsoleSize();
 
-        const double screenHeight = rows * 33;
+        const double screenHeight = rows * 32;
         const double screenWidth = columns * 16;
         const double frameAspectRatio = static_cast<double>(frame.rows) / static_cast<double>(frame.cols);
         int32_t symbolHeight, symbolWidth;
         if (screenHeight / screenWidth > frameAspectRatio) {
-            symbolHeight = static_cast<int32_t>(columns * frameAspectRatio * (16.0 / 33.0));
+            symbolHeight = static_cast<int32_t>(columns * frameAspectRatio * (16.0 / 32.0));
             symbolWidth = columns;
         } else {
             symbolHeight = rows;
-            symbolWidth = static_cast<int32_t>(rows / frameAspectRatio * (33.0 / 16.0));
+            symbolWidth = static_cast<int32_t>(rows / frameAspectRatio * (32.0 / 16.0));
         }
 
         const int32_t bufferSize = ((columns - symbolWidth) / 2 + SYMBOL_SIZE * symbolWidth + 7) * symbolHeight + 1;

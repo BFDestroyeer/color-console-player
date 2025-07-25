@@ -10,10 +10,12 @@
 
 FrameWriter::FrameWriter(
     const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
-    const std::shared_ptr<TextFrameBuffer>& textFrameBuffer
+    const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
+    const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService
 )
     : beginPlayTime(beginPlayTime),
-      textFrameBuffer(textFrameBuffer) {
+      textFrameBuffer(textFrameBuffer),
+      consoleWindowSizeService(consoleWindowSizeService) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
@@ -53,16 +55,31 @@ FrameWriter::FrameWriter(
                 }
                 auto endFrameTime = std::chrono::high_resolution_clock::now();
                 std::cout << std::format("\x1b[{};0H", frame->getSymbolHeight() + 1);
-                std::cout << "Frame time: " << std::format(
+
+                auto symbolCount = frame->getSymbolWidth() * frame->getSymbolHeight();
+                auto renderTimeInMilliseconds = static_cast<double>(frame->getRenderTime().count()) / 1e6;
+                auto writeTimeInMilliseconds = static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    endWriteTime - beginWriteTime
+                ).count()) / 1e6;
+
+                std::stringstream statusBarStream;
+                statusBarStream<< "Frame time: " << std::format(
                     "{:10.3f}",
                     std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6
                 );
-                std::cout << " Render time: " << std::format("{:10.3f}", frame->getRenderTime().count() / 1e6);
-                std::cout << " Write time: " << std::format(
+                statusBarStream << " Render time: " << std::format("{:10.3f}", renderTimeInMilliseconds);
+                statusBarStream << " Write time: " << std::format(
                     "{:10.3f}",
-                    std::chrono::duration_cast<std::chrono::nanoseconds>(endWriteTime - beginWriteTime).count() / 1e6
+                    writeTimeInMilliseconds
                 );
-                std::cout << " Skipped frames: " << std::format("{:7d}", skippedFramesCount);
+                statusBarStream << " Skipped frames: " << std::format("{:7d}", skippedFramesCount);
+                statusBarStream << " Resolution: " << frame->getSymbolWidth() << "×" <<  frame->getSymbolHeight();
+                statusBarStream << " Symbols: " << symbolCount;
+                statusBarStream << " Render performance: " << std::format("{:10.3f}", static_cast<double>(symbolCount) / renderTimeInMilliseconds);
+                statusBarStream << " Write performance: " << std::format("{:10.3f}", static_cast<double>(symbolCount) / writeTimeInMilliseconds);
+
+                auto [consoleWidth, _] = this->consoleWindowSizeService->getConsoleSize();
+                std::cout << statusBarStream.str().substr(0, consoleWidth);
             }
         }
     ).detach();

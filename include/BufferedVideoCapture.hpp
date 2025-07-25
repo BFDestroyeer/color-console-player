@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include <opencv2/opencv.hpp>
 
 /**

@@ -74,7 +74,8 @@ void FrameRenderer::start() {
             frameIndex++,
             framePosition,
             std::chrono::duration_cast<std::chrono::nanoseconds>(endRenderTime - beginRenderTime),
-            symbolHeight
+            symbolHeight,
+            symbolWidth
         );
         textFrameBuffer->swapRenderAndReadyFrame();
         std::swap(frame, previousFrame);

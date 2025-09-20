@@ -34,6 +34,11 @@ private:
      */
     int32_t symbolHeight;
 
+    /**
+     * @brief Width of console window in symbols while rendering
+     */
+    int32_t symbolWidth;
+
 public:
     /**
      * @param bufferSize size of buffer
@@ -85,16 +90,25 @@ public:
     int32_t getSymbolHeight() const;
 
     /**
+     * @brief Get width of console window in symbols while rendering
+     * @return Width of console window in symbols while rendering
+     */
+    [[nodiscard]]
+    int32_t getSymbolWidth() const;
+
+    /**
      * @brief Update frame content
      * @param frameIndex Index of frame
      * @param framePosition Frame position
      * @param renderTime Frame rendering time
      * @param symbolHeight Height of console window in symbols while rendering
+     * @param symbolWidth Width of console window in symbols while rendering
      */
     void updateFrame(
         uint64_t frameIndex,
         std::chrono::duration<int64_t, std::ratio<1, 1000000000>> framePosition,
         std::chrono::nanoseconds renderTime,
-        int32_t symbolHeight
+        int32_t symbolHeight,
+        int32_t symbolWidth
     );
 };

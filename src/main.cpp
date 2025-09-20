@@ -31,15 +31,16 @@ int main(int argc, char* argv[]) {
 #endif
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();
 
-    const auto consoleSizeRecorder = std::make_shared<ConsoleWindowSizeService>();
+    const auto consoleWindowSizeService = std::make_shared<ConsoleWindowSizeService>();
     const auto textFrameBuffer = std::make_shared<TextFrameBuffer>(0);
     const auto frameWriter = std::make_shared<FrameWriter>(
         beginPlayTime,
-        textFrameBuffer
+        textFrameBuffer,
+        consoleWindowSizeService
     );
     const auto frameRenderer = std::make_shared<FrameRenderer>(
         beginPlayTime,
-        consoleSizeRecorder,
+        consoleWindowSizeService,
         textFrameBuffer,
         std::make_shared<cv::VideoCapture>(argv[1])
     );

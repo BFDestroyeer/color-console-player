@@ -20,7 +20,7 @@ endif ()
 
 # Disable deprecated std::shared_ptr atomic API warning because Clang compiler hasn't std::atomic<std::shared_ptr> support
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-add_compile_definitions(_SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING)
+    add_compile_definitions(_SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING)
 endif ()
 
 include_directories("include")

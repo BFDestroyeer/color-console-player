@@ -1,5 +1,7 @@
 # Color console player
 
+![](readme/sample.png)
+
 # Quick start
 
 ## Requirements

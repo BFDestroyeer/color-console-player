@@ -5,9 +5,9 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "AudioPlayer.hpp"
 #include "ConsoleWindowSizeService.hpp"
 #include "FrameRenderer.hpp"
-
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -19,16 +19,6 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-#ifdef _WIN32
-    const auto executableDir = std::filesystem::path(argv[0]).parent_path();
-    _popen(
-        std::format("{}\\ffplay.exe \"{}\" -nodisp -autoexit -loglevel quiet", executableDir.string(), argv[1]).c_str(),
-        "r"
-    );
-#endif
-#if defined(__unix__) || defined(__APPLE__)
-    popen(std::format("ffplay \"{}\" -nodisp -autoexit -loglevel quiet", argv[1]).c_str(), "r");
-#endif
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();
 
     const auto consoleWindowSizeService = std::make_shared<ConsoleWindowSizeService>();
@@ -44,7 +34,9 @@ int main(int argc, char* argv[]) {
         textFrameBuffer,
         std::make_shared<cv::VideoCapture>(argv[1])
     );
+    const auto audioPlayer = std::make_shared<AudioPlayer>(argv[1]);
 
+    audioPlayer->play();
     frameRenderer->start();
 
     return EXIT_SUCCESS;

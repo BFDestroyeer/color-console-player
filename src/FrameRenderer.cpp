@@ -4,12 +4,11 @@ FrameRenderer::FrameRenderer(
     const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
     const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService,
     const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
-    const std::shared_ptr<cv::VideoCapture>& videoCapture
+    const std::shared_ptr<VideoCapture>& videoCapture
 ) : beginPlayTime(beginPlayTime),
     consoleWindowSizeService(consoleWindowSizeService),
     textFrameBuffer(textFrameBuffer),
-    videoCapture(videoCapture),
-    bufferedVideoCapture(videoCapture) {
+    videoCapture(videoCapture) {
 }
 
 void FrameRenderer::start() {
@@ -19,7 +18,7 @@ void FrameRenderer::start() {
     int32_t previousColumns = -1;
     int32_t previousRows = -1;
 
-    const auto frameRate = videoCapture->get(cv::CAP_PROP_FPS);
+    const auto frameRate = videoCapture->getFrameRate();
     const auto frameDuration = std::chrono::nanoseconds(static_cast<int64_t>(1e9 / frameRate));
 
     uint64_t frameIndex = 0;
@@ -27,7 +26,7 @@ void FrameRenderer::start() {
         auto beginRenderTime = std::chrono::high_resolution_clock::now();
 
         double capturePosition;
-        if (!bufferedVideoCapture.read(frame, capturePosition)) {
+        if (!videoCapture->read(frame, capturePosition)) {
             break;
         }
         const auto framePosition =

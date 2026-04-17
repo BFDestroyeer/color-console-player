@@ -5,6 +5,7 @@
 #include "BufferedVideoCapture.hpp"
 #include "ConsoleWindowSizeService.hpp"
 #include "TextFrameBuffer.hpp"
+#include "VideoCapture.hpp"
 
 class FrameRenderer {
 private:
@@ -31,12 +32,7 @@ private:
     /**
      * @brief OpenCV video capture
      */
-    const std::shared_ptr<cv::VideoCapture> videoCapture;
-
-    /**
-     * @brief Buffered video capture
-     */
-    BufferedVideoCapture bufferedVideoCapture;
+    const std::shared_ptr<VideoCapture> videoCapture;
 
 public:
 
@@ -50,7 +46,7 @@ public:
         const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
         const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService,
         const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
-        const std::shared_ptr<cv::VideoCapture>& videoCapture
+        const std::shared_ptr<VideoCapture>& videoCapture
     );
 
     /**

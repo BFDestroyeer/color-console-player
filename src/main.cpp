@@ -9,6 +9,11 @@
 #include "ConsoleWindowSizeService.hpp"
 #include "FrameRenderer.hpp"
 
+#include <iostream>
+#include <string>
+
+#include "VideoCapture.hpp"
+
 int main(int argc, char* argv[]) {
     if (argc != 2) {
         std::cout << "Usage: " << argv[0] << " <path to file>" << std::endl;
@@ -32,7 +37,7 @@ int main(int argc, char* argv[]) {
         beginPlayTime,
         consoleWindowSizeService,
         textFrameBuffer,
-        std::make_shared<cv::VideoCapture>(argv[1])
+        std::make_shared<VideoCapture>("")
     );
     const auto audioPlayer = std::make_shared<AudioPlayer>(argv[1]);
 

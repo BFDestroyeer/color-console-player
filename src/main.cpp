@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
         beginPlayTime,
         consoleWindowSizeService,
         textFrameBuffer,
-        std::make_shared<VideoCapture>("")
+        std::make_shared<VideoCapture>(argv[1])
     );
     const auto audioPlayer = std::make_shared<AudioPlayer>(argv[1]);
 

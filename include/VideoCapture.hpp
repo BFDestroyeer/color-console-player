@@ -15,18 +15,39 @@ private:
     uint8_t *buffer;
     AVPacket *packet;
     AVFrame *frame;
-    AVFrame *frame_bgr;
-    AVCodecContext *codec_ctx;
-    AVFormatContext *format_ctx;
-    SwsContext *sws_ctx;
-    int video_stream_idx;
+    AVFrame *bgrFrame;
+    AVCodecContext *codecContext;
+    AVFormatContext *formatContext;
+    SwsContext *transcoderContext;
+    int videoStreamIndex;
+
+    /**
+    * @brief Next frame
+    */
+    cv::Mat opencvFrame;
+
+    /**
+     * @brief Frame position in milliseconds
+     */
+    double position;
+
+    /**
+     * @brief Return value of videoCapture->read()
+     */
+    bool frameReadResult;
+
+    /**
+     * @brief true if next frame is ready, false if not
+     */
+    std::atomic<bool> isFrameReady;
 
 public:
-    VideoCapture(const std::string& mediaFilePath);
+    explicit VideoCapture(const std::string& mediaFilePath);
 
     ~VideoCapture();
 
     bool read(cv::Mat& outputFrame, double& outputPosition);
 
+    [[nodiscard]]
     double getFrameRate() const;
 };

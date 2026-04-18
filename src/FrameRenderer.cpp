@@ -25,21 +25,11 @@ void FrameRenderer::start() {
     while (true) {
         auto beginRenderTime = std::chrono::high_resolution_clock::now();
 
-        double capturePosition;
-        if (!videoCapture->read(frame, capturePosition)) {
-            break;
-        }
-        const auto framePosition =
-                std::chrono::duration<int64_t, std::ratio<1, 1000000000>>(static_cast<int64_t>(capturePosition * 1e6));
-        if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
-            continue;
-        }
-
         auto [columns, rows] = consoleWindowSizeService->getConsoleSize();
 
         const double screenHeight = rows * 32;
         const double screenWidth = columns * 16;
-        const double frameAspectRatio = static_cast<double>(frame.rows) / static_cast<double>(frame.cols);
+        const double frameAspectRatio = static_cast<double>(videoCapture->getOriginalHeight()) / static_cast<double>(videoCapture->getOriginalWidth());
         int32_t symbolHeight, symbolWidth;
         if (screenHeight / screenWidth > frameAspectRatio) {
             symbolHeight = static_cast<int32_t>(columns * frameAspectRatio * (16.0 / 32.0));
@@ -64,7 +54,15 @@ void FrameRenderer::start() {
         previousColumns = columns;
         previousRows = rows;
 
-        cv::resize(frame, frame, cv::Size(symbolWidth * 4, symbolHeight * 4));
+        double capturePosition;
+        if (!videoCapture->read(frame, capturePosition, symbolWidth * 4, symbolHeight * 4)) {
+            break;
+        }
+        const auto framePosition =
+                std::chrono::duration<int64_t, std::ratio<1, 1000000000>>(static_cast<int64_t>(capturePosition * 1e6));
+        if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
+            continue;
+        }
 
         auto renderFrame = textFrameBuffer->getRenderFrame();
         imageToText(frame, (columns - symbolWidth) / 2, renderFrame->getBuffer());

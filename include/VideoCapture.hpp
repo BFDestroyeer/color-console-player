@@ -9,6 +9,8 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#include <atomic>
+
 class VideoCapture {
 private:
     uint8_t *buffer = nullptr;
@@ -20,6 +22,10 @@ private:
     SwsContext *transcoderContext = nullptr;
 
     uint64_t videoStreamIndex;
+
+    int32_t currentWidth = 0;
+    int32_t currentHeight = 0;
+
 
     /**
     * @brief Next frame
@@ -46,8 +52,12 @@ public:
 
     ~VideoCapture();
 
-    bool read(cv::Mat& outputFrame, double& outputPosition);
+    bool read(cv::Mat& outputFrame, double& outputPosition, int32_t width, int32_t height);
 
     [[nodiscard]]
     double getFrameRate() const;
+
+    int32_t getOriginalWidth() const;
+
+    int32_t getOriginalHeight() const;
 };

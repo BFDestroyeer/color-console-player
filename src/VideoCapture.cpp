@@ -4,6 +4,8 @@ extern "C" {
 #include <libavutil/imgutils.h>
 }
 
+#include <thread>
+
 VideoCapture::VideoCapture(const std::string &mediaFilePath) {
     if (avformat_open_input(&formatContext,mediaFilePath.c_str(), nullptr, nullptr) != 0) {
         return;
@@ -63,22 +65,6 @@ VideoCapture::VideoCapture(const std::string &mediaFilePath) {
                     if (packet->stream_index == videoStreamIndex) {
                         if (avcodec_send_packet(codecContext, packet) >= 0) {
                             while (avcodec_receive_frame(codecContext, frame) >= 0) {
-                                sws_scale(
-                                    transcoderContext,
-                                    frame->data,
-                                    frame->linesize,
-                                    0,
-                                    codecContext->height,
-                                    bgrFrame->data,
-                                    bgrFrame->linesize
-                                );
-                                opencvFrame = cv::Mat(
-                                    codecContext->height,
-                                    codecContext->width,
-                                    CV_8UC3,
-                                    bgrFrame->data[0],
-                                    bgrFrame->linesize[0]
-                                );
                                 position = frame->pts * av_q2d(formatContext->streams[videoStreamIndex]->time_base) * 1000.0;
                                 isFrameReady = true;
                                 while (isFrameReady) {
@@ -105,9 +91,55 @@ VideoCapture::~VideoCapture() {
 }
 
 
-bool VideoCapture::read(cv::Mat &outputFrame, double &outputPosition) {
+bool VideoCapture::read(cv::Mat &outputFrame, double &outputPosition, int32_t width, int32_t height) {
+    if (currentWidth != width || currentHeight != height) {
+        delete[] buffer;
+        av_frame_free(&bgrFrame);
+        sws_freeContext(transcoderContext);
+
+        const int bufferSize = av_image_get_buffer_size(AV_PIX_FMT_BGR24, width, height, 1);
+        buffer = new uint8_t[bufferSize];
+        bgrFrame = av_frame_alloc();
+        av_image_fill_arrays(
+            bgrFrame->data,
+            bgrFrame->linesize,
+            buffer,
+            AV_PIX_FMT_BGR24,
+            width,
+            height,
+            1
+        );
+
+        transcoderContext = sws_getContext(
+        codecContext->width, codecContext->height, codecContext->pix_fmt,
+        width, height, AV_PIX_FMT_BGR24,
+        SWS_BILINEAR, nullptr, nullptr, nullptr
+    );
+
+        currentWidth = width;
+        currentHeight = height;
+    }
+
     while (!isFrameReady) {
     }
+
+    sws_scale(
+        transcoderContext,
+        frame->data,
+        frame->linesize,
+        0,
+        codecContext->height,
+        bgrFrame->data,
+        bgrFrame->linesize
+    );
+    opencvFrame = cv::Mat(
+        height,
+        width,
+        CV_8UC3,
+        bgrFrame->data[0],
+        bgrFrame->linesize[0]
+    );
+
     outputFrame = std::move(opencvFrame);
     outputPosition = position;
     isFrameReady = false;
@@ -118,3 +150,10 @@ double VideoCapture::getFrameRate() const {
     return av_q2d(formatContext->streams[videoStreamIndex]->avg_frame_rate);
 }
 
+int32_t VideoCapture::getOriginalWidth() const {
+    return codecContext->width;
+}
+
+int32_t VideoCapture::getOriginalHeight() const {
+    return codecContext->height;
+}

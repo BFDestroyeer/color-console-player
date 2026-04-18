@@ -7,19 +7,19 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
-#include <libavutil/imgutils.h>
 }
 
 class VideoCapture {
 private:
-    uint8_t *buffer;
-    AVPacket *packet;
-    AVFrame *frame;
-    AVFrame *bgrFrame;
-    AVCodecContext *codecContext;
-    AVFormatContext *formatContext;
-    SwsContext *transcoderContext;
-    int videoStreamIndex;
+    uint8_t *buffer = nullptr;
+    AVPacket *packet = nullptr;
+    AVFrame *frame = nullptr;
+    AVFrame *bgrFrame = nullptr;
+    AVCodecContext *codecContext = nullptr;
+    AVFormatContext *formatContext = nullptr;
+    SwsContext *transcoderContext = nullptr;
+
+    uint64_t videoStreamIndex;
 
     /**
     * @brief Next frame
@@ -34,7 +34,7 @@ private:
     /**
      * @brief Return value of videoCapture->read()
      */
-    bool frameReadResult;
+    bool frameReadResult = true;
 
     /**
      * @brief true if next frame is ready, false if not

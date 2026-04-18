@@ -1,40 +1,38 @@
 #include "VideoCapture.hpp"
 
+extern "C" {
+#include <libavutil/imgutils.h>
+}
+
 VideoCapture::VideoCapture(const std::string &mediaFilePath) {
-    // 1. Открываем файл
-    formatContext = nullptr;
     if (avformat_open_input(&formatContext,mediaFilePath.c_str(), nullptr, nullptr) != 0) {
         return;
     }
 
-    // 2. Ищем информацию о потоках
     if (avformat_find_stream_info(formatContext, nullptr) < 0) {
         return;
     }
-
-    // 3. Находим видео-поток
-    videoStreamIndex = -1;
+    videoStreamIndex = std::numeric_limits<uint64_t>::max();
     const AVCodec *codec = nullptr;
-    AVCodecParameters *codec_params = nullptr;
-
-    for (unsigned int i = 0; i < formatContext->nb_streams; i++) {
+    const AVCodecParameters *codecParameters = nullptr;
+    for (uint64_t i = 0; i < formatContext->nb_streams; i++) {
         if (formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
             videoStreamIndex = i;
-            codec_params = formatContext->streams[i]->codecpar;
-            codec = avcodec_find_decoder(codec_params->codec_id);
+            codecParameters = formatContext->streams[i]->codecpar;
+            codec = avcodec_find_decoder(codecParameters->codec_id);
             break;
         }
     }
+    if (videoStreamIndex == std::numeric_limits<uint64_t>::max()) {
+        return;
+    }
 
-    if (videoStreamIndex == -1) return;
-
-    // 4. Настраиваем контекст декодера
     codecContext = avcodec_alloc_context3(codec);
-    avcodec_parameters_to_context(codecContext, codec_params);
-    if (avcodec_open2(codecContext, codec, nullptr) < 0) return;
+    avcodec_parameters_to_context(codecContext, codecParameters);
+    if (avcodec_open2(codecContext, codec, nullptr) < 0) {
+        return;
+    }
 
-    // 5. Готовим инструменты для конвертации (SwsContext)
-    // Видео обычно в YUV420P, а OpenCV нужен BGR
     transcoderContext = sws_getContext(
         codecContext->width, codecContext->height, codecContext->pix_fmt,
         codecContext->width, codecContext->height, AV_PIX_FMT_BGR24,
@@ -45,13 +43,13 @@ VideoCapture::VideoCapture(const std::string &mediaFilePath) {
     frame = av_frame_alloc();
     bgrFrame = av_frame_alloc();
 
-    // Буфер для кадра BGR
-    int num_bytes = av_image_get_buffer_size(AV_PIX_FMT_BGR24, codecContext->width, codecContext->height, 1);
-    buffer = (uint8_t *) av_malloc(num_bytes * sizeof(uint8_t));
+    const int bufferSize = av_image_get_buffer_size(AV_PIX_FMT_BGR24, codecContext->width, codecContext->height, 1);
+    buffer = new uint8_t[bufferSize];
     av_image_fill_arrays(
         bgrFrame->data,
         bgrFrame->linesize,
-        buffer, AV_PIX_FMT_BGR24,
+        buffer,
+        AV_PIX_FMT_BGR24,
         codecContext->width,
         codecContext->height,
         1
@@ -61,25 +59,27 @@ VideoCapture::VideoCapture(const std::string &mediaFilePath) {
     std::thread(
         [&] {
             while (true) {
-                bool ready = false;
                 while (av_read_frame(formatContext, packet) >= 0) {
                     if (packet->stream_index == videoStreamIndex) {
-                        // Отправляем пакет в декодер
                         if (avcodec_send_packet(codecContext, packet) >= 0) {
                             while (avcodec_receive_frame(codecContext, frame) >= 0) {
-                                // Конвертируем из родного формата (YUV) в BGR для OpenCV
-                                sws_scale(transcoderContext, frame->data, frame->linesize, 0, codecContext->height,
-                                          bgrFrame->data, bgrFrame->linesize);
-
-                                // Создаем cv::Mat на основе данных из кадра FFmpeg
-                                opencvFrame = cv::Mat(codecContext->height, codecContext->width, CV_8UC3,
-                                                      bgrFrame->data[0], bgrFrame->linesize[0]);
-                                position = frame->pts * av_q2d(
-                                                     formatContext->streams[videoStreamIndex]->time_base) * 1000.0;
-
-                                // Показываем результат
-                                // cv::imshow("FFmpeg + OpenCV", outputFrame);
-                                // if (cv::waitKey(1) == 27) break; // ESC для выхода
+                                sws_scale(
+                                    transcoderContext,
+                                    frame->data,
+                                    frame->linesize,
+                                    0,
+                                    codecContext->height,
+                                    bgrFrame->data,
+                                    bgrFrame->linesize
+                                );
+                                opencvFrame = cv::Mat(
+                                    codecContext->height,
+                                    codecContext->width,
+                                    CV_8UC3,
+                                    bgrFrame->data[0],
+                                    bgrFrame->linesize[0]
+                                );
+                                position = frame->pts * av_q2d(formatContext->streams[videoStreamIndex]->time_base) * 1000.0;
                                 isFrameReady = true;
                                 while (isFrameReady) {
                                 }
@@ -87,18 +87,15 @@ VideoCapture::VideoCapture(const std::string &mediaFilePath) {
                         }
                     }
                     av_packet_unref(packet);
-                    if (ready) {
-                        return true;
-                    }
                 }
-                return false;
+                frameReadResult = false;
             }
         }
     ).detach();
 }
 
 VideoCapture::~VideoCapture() {
-    av_free(buffer);
+    delete[] buffer;
     av_frame_free(&frame);
     av_frame_free(&bgrFrame);
     av_packet_free(&packet);

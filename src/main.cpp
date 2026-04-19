@@ -3,8 +3,6 @@
 #include "FrameWriter.hpp"
 #include "TextFrameBuffer.hpp"
 
-#include <opencv2/opencv.hpp>
-
 #include "AudioPlayer.hpp"
 #include "ConsoleWindowSizeService.hpp"
 #include "FrameRenderer.hpp"

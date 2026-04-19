@@ -12,8 +12,7 @@ FrameRenderer::FrameRenderer(
 }
 
 void FrameRenderer::start() {
-    auto frame = cv::Mat();
-    auto previousFrame = cv::Mat();
+    auto imageFrame = ImageFrame(0, 0);
 
     int32_t previousColumns = -1;
     int32_t previousRows = -1;
@@ -43,7 +42,6 @@ void FrameRenderer::start() {
 
         if (previousColumns != columns || previousRows != rows) {
             textFrameBuffer->resize(bufferSize);
-            previousFrame = cv::Mat();
 #ifdef _WIN32
             std::system("cls");
 #endif
@@ -55,7 +53,7 @@ void FrameRenderer::start() {
         previousRows = rows;
 
         double capturePosition;
-        if (!videoCapture->read(frame, capturePosition, symbolWidth * 4, symbolHeight * 4)) {
+        if (!videoCapture->read(imageFrame, symbolWidth * 4, symbolHeight * 4)) {
             break;
         }
         const auto framePosition =
@@ -65,7 +63,7 @@ void FrameRenderer::start() {
         }
 
         auto renderFrame = textFrameBuffer->getRenderFrame();
-        imageToText(frame, (columns - symbolWidth) / 2, renderFrame->getBuffer());
+        imageToText(imageFrame, (columns - symbolWidth) / 2, renderFrame->getBuffer());
         auto endRenderTime = std::chrono::high_resolution_clock::now();
         renderFrame->updateFrame(
             frameIndex++,
@@ -75,7 +73,6 @@ void FrameRenderer::start() {
             symbolWidth
         );
         textFrameBuffer->swapRenderAndReadyFrame();
-        std::swap(frame, previousFrame);
 
         while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
                framePosition < std::chrono::nanoseconds::zero()) {
@@ -84,13 +81,13 @@ void FrameRenderer::start() {
 }
 
 void FrameRenderer::imageToText(
-    const cv::Mat& image,
+    const ImageFrame& image,
     const uint64_t horizontalOffset,
     uint8_t* buffer
 ) {
 #pragma omp parallel for num_threads(4)
-    for (int32_t y = 0; y < image.rows; y += 4) {
-        for (int32_t x = 0; x < image.cols; x += 4) {
+    for (int32_t y = 0; y < image.getHeight(); y += 4) {
+        for (int32_t x = 0; x < image.getWidth(); x += 4) {
             auto firstForeground = cv::Vec3s(0, 0, 0);
             auto firstBackground = cv::Vec3s(0, 0, 0);
 
@@ -159,85 +156,85 @@ void FrameRenderer::imageToText(
             // <Foreground color><Background color><Symbol>
             // \x1b[38;2;<Red>;<Green>;<Blue>m\x1b[48;2;<Red>;<Green>;<Blue>m<Symbol>
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset + (x / 4) *
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset + (x / 4) *
                 SYMBOL_SIZE,
                 "\x1b[38;2;",
                 7
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 7,
                 unsignedToText(secondForeground[2]),
                 3
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 10,
                 ";",
                 1
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 11,
                 unsignedToText(secondForeground[1]),
                 3
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 14,
                 ";",
                 1
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 15,
                 unsignedToText(secondForeground[0]),
                 3
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 18,
                 "m\x1b[48;2;",
                 8
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 26,
                 unsignedToText(secondBackground[2]),
                 3
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 29,
                 ";",
                 1
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 30,
                 unsignedToText(secondBackground[1]),
                 3
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 33,
                 ";",
                 1
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 34,
                 unsignedToText(secondBackground[0]),
                 3
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 37,
                 "m",
                 1
             );
             std::memcpy(
-                buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+                buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
                 (x / 4) * SYMBOL_SIZE + 38,
                 symbol,
                 3
@@ -246,8 +243,8 @@ void FrameRenderer::imageToText(
 
         // Reset color mode and end line
         std::memcpy(
-            buffer + (y / 4) * (horizontalOffset + (image.cols / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
-            (image.cols / 4) * SYMBOL_SIZE,
+            buffer + (y / 4) * (horizontalOffset + (image.getWidth() / 4) * SYMBOL_SIZE + 7) + horizontalOffset +
+            (image.getWidth() / 4) * SYMBOL_SIZE,
             "\x1b[0;0m\n",
             7
         );

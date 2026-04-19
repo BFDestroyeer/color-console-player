@@ -1,8 +1,5 @@
 #pragma once
 
-#include <opencv2/opencv.hpp>
-
-#include "BufferedVideoCapture.hpp"
 #include "ConsoleWindowSizeService.hpp"
 #include "TextFrameBuffer.hpp"
 #include "VideoCapture.hpp"
@@ -62,7 +59,7 @@ private:
      * @param [out] buffer Output text buffer
      */
     static void imageToText(
-        const cv::Mat& image,
+        const ImageFrame& image,
         uint64_t horizontalOffset,
         uint8_t* buffer
     );
@@ -74,7 +71,7 @@ private:
      * @param color Color to test
      * @return 1 if foreground color is nearest, 0 if background
      */
-    inline static uint16_t getColor(const cv::Vec3s& foreground, const cv::Vec3s& background, const cv::Vec3s& color);
+    inline static uint16_t getColor(const uint16_t* foreground, const uint16_t* background, const uint8_t* color);
 
     /**
      * @brief Convert unsigned integer value to text literal

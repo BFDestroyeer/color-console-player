@@ -1,7 +1,7 @@
 #pragma once
-#include <string>
 
-#include <opencv2/opencv.hpp>
+#include <atomic>
+#include <string>
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -9,7 +9,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-#include <atomic>
+#include "ImageFrame.hpp"
 
 class VideoCapture {
 private:
@@ -25,7 +25,6 @@ private:
 
     int32_t currentWidth = 0;
     int32_t currentHeight = 0;
-
 
     /**
     * @brief Next frame
@@ -47,12 +46,14 @@ private:
      */
     std::atomic<bool> isFrameReady;
 
+    std::shared_ptr<ImageFrame> imageFrame;
+
 public:
     explicit VideoCapture(const std::string& mediaFilePath);
 
     ~VideoCapture();
 
-    bool read(cv::Mat& outputFrame, double& outputPosition, int32_t width, int32_t height);
+    bool read(ImageFrame& outputFrame, int32_t width, int32_t height);
 
     [[nodiscard]]
     double getFrameRate() const;

@@ -91,7 +91,7 @@ VideoCapture::~VideoCapture() {
 }
 
 
-bool VideoCapture::read(cv::Mat &outputFrame, double &outputPosition, int32_t width, int32_t height) {
+bool VideoCapture::read(ImageFrame& outputFrame, const int32_t width, const int32_t height) {
     if (currentWidth != width || currentHeight != height) {
         delete[] buffer;
         av_frame_free(&bgrFrame);
@@ -119,6 +119,7 @@ bool VideoCapture::read(cv::Mat &outputFrame, double &outputPosition, int32_t wi
         currentWidth = width;
         currentHeight = height;
     }
+    outputFrame.resize(width, height);
 
     while (!isFrameReady) {
     }
@@ -132,16 +133,17 @@ bool VideoCapture::read(cv::Mat &outputFrame, double &outputPosition, int32_t wi
         bgrFrame->data,
         bgrFrame->linesize
     );
-    opencvFrame = cv::Mat(
-        height,
+    av_image_copy_to_buffer(
+        outputFrame.getBuffer(),
+        outputFrame.getHeight() * outputFrame.getWidth() * 3,
+        bgrFrame->data,
+        bgrFrame->linesize,
+        AV_PIX_FMT_BGR24,
         width,
-        CV_8UC3,
-        bgrFrame->data[0],
-        bgrFrame->linesize[0]
+        height,
+        1
     );
-
-    outputFrame = std::move(opencvFrame);
-    outputPosition = position;
+    outputFrame.setPosition(position);
     isFrameReady = false;
     return frameReadResult;
 }

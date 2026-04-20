@@ -71,7 +71,7 @@ private:
      * @param color Color to test
      * @return 1 if foreground color is nearest, 0 if background
      */
-    inline static uint16_t getColor(const uint16_t* foreground, const uint16_t* background, const uint8_t* color);
+    inline static uint16_t getColor(const Color<int16_t>& foreground, const Color<int16_t>& background, const Color<uint8_t>& color);
 
     /**
      * @brief Convert unsigned integer value to text literal

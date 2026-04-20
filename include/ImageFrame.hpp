@@ -1,6 +1,8 @@
 # pragma once
 #include <cstdint>
 
+#include "Color.hpp"
+
 class ImageFrame {
     uint8_t* buffer;
 
@@ -15,13 +17,17 @@ public:
 
     ~ImageFrame();
 
+    Color<uint8_t> getColorAt(int y, int x) const;
+
     void resize(uint64_t width, uint64_t height);
 
-    inline uint8_t* getBuffer() const;
+     uint8_t* getBuffer() const;
 
-    inline uint64_t getWidth() const;
+     uint64_t getWidth() const;
 
-    inline uint64_t getHeight() const;
+     uint64_t getHeight() const;
 
-    inline void setPosition(double position);
+    double getPosition() const;
+
+     void setPosition(double position);
 };

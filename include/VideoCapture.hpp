@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 #include <string>
 
 extern "C" {
@@ -25,11 +26,6 @@ private:
 
     int32_t currentWidth = 0;
     int32_t currentHeight = 0;
-
-    /**
-    * @brief Next frame
-    */
-    cv::Mat opencvFrame;
 
     /**
      * @brief Frame position in milliseconds

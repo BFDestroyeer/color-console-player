@@ -52,12 +52,11 @@ void FrameRenderer::start() {
         previousColumns = columns;
         previousRows = rows;
 
-        double capturePosition;
         if (!videoCapture->read(imageFrame, symbolWidth * 4, symbolHeight * 4)) {
             break;
         }
         const auto framePosition =
-                std::chrono::duration<int64_t, std::ratio<1, 1000000000>>(static_cast<int64_t>(capturePosition * 1e6));
+                std::chrono::duration<int64_t, std::ratio<1, 1000000000>>(static_cast<int64_t>(imageFrame.getPosition() * 1e6));
         if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
             continue;
         }
@@ -88,15 +87,15 @@ void FrameRenderer::imageToText(
 #pragma omp parallel for num_threads(4)
     for (int32_t y = 0; y < image.getHeight(); y += 4) {
         for (int32_t x = 0; x < image.getWidth(); x += 4) {
-            auto firstForeground = cv::Vec3s(0, 0, 0);
-            auto firstBackground = cv::Vec3s(0, 0, 0);
+            auto firstForeground = Color<int16_t>();
+            auto firstBackground = Color<int16_t>();
 
             double maxNorm = (std::numeric_limits<double>::min)();
             double minNorm = (std::numeric_limits<double>::max)();
             for (int32_t localY = 0; localY < 4; localY++) {
                 for (int32_t localX = 0; localX < 4; localX++) {
-                    const auto& color = image.at<cv::Vec3b>(y + localY, x + localX);
-                    const auto colorNorm = cv::norm(color, cv::NORM_L2SQR);
+                    auto color = image.getColorAt(y + localY, x + localX);
+                    auto colorNorm = color.squareNorm();
                     if (colorNorm > maxNorm) {
                         maxNorm = colorNorm;
                         firstForeground = color;
@@ -108,14 +107,14 @@ void FrameRenderer::imageToText(
                 }
             }
 
-            auto secondForeground = cv::Vec3s(0, 0, 0);
-            auto secondBackground = cv::Vec3s(0, 0, 0);
+            auto secondForeground = Color<int16_t>();
+            auto secondBackground = Color<int16_t>();
             uint8_t foregroundClusterSize = 0;
             uint8_t backgroundClusterSize = 0;
 
             for (int32_t localY = 0; localY < 4; localY++) {
                 for (int32_t localX = 0; localX < 4; localX++) {
-                    auto& color = image.at<cv::Vec3b>(y + localY, x + localX);
+                    auto color = image.getColorAt(y + localY, x + localX);
                     if (getColor(firstForeground, firstBackground, color)) {
                         foregroundClusterSize++;
                         secondForeground += color;
@@ -136,7 +135,7 @@ void FrameRenderer::imageToText(
                         convolution += getColor(
                                 secondForeground,
                                 secondBackground,
-                                image.at<cv::Vec3b>(y + localY, x + localX)
+                                image.getColorAt(y + localY, x + localX)
                         ) << index;
                     }
                 }
@@ -252,11 +251,11 @@ void FrameRenderer::imageToText(
 }
 
 uint16_t FrameRenderer::getColor(
-    const cv::Vec3s& foreground,
-    const cv::Vec3s& background,
-    const cv::Vec3s& color
+    const Color<int16_t>& foreground,
+    const Color<int16_t>& background,
+    const Color<uint8_t>& color
 ) {
-    if (cv::norm(foreground - color, cv::NORM_L2SQR) < cv::norm(background - color, cv::NORM_L2SQR)) {
+    if ((foreground - color).squareNorm() < (background - color).squareNorm()) {
         return 1;
     }
     return 0;

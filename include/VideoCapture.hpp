@@ -14,13 +14,13 @@ extern "C" {
 
 class VideoCapture {
 private:
-    uint8_t *buffer = nullptr;
-    AVPacket *packet = nullptr;
-    AVFrame *frame = nullptr;
-    AVFrame *bgrFrame = nullptr;
-    AVCodecContext *codecContext = nullptr;
-    AVFormatContext *formatContext = nullptr;
-    SwsContext *transcoderContext = nullptr;
+    uint8_t* buffer = nullptr;
+    AVPacket* packet = nullptr;
+    AVFrame* frame = nullptr;
+    AVFrame* bgrFrame = nullptr;
+    AVCodecContext* codecContext = nullptr;
+    AVFormatContext* formatContext = nullptr;
+    SwsContext* transcoderContext = nullptr;
 
     uint64_t videoStreamIndex;
 

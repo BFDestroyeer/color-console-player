@@ -33,7 +33,7 @@ public:
         return Color(this->data[0] - color[0], this->data[1] - color[1], this->data[2] - color[2]);
     }
 
-    template <typename T_>
+    template<typename T_>
     Color& operator+=(const Color<T_>& color) {
         this->data[0] += color[0];
         this->data[1] += color[1];
@@ -56,7 +56,7 @@ public:
     [[nodiscard]]
     double squareNorm() const {
         return static_cast<double>(data[0]) * static_cast<double>(data[0])
-        + static_cast<double>(data[1]) * static_cast<double>(data[1])
-        + static_cast<double>(data[2]) * static_cast<double>(data[2]);
+               + static_cast<double>(data[1]) * static_cast<double>(data[1])
+               + static_cast<double>(data[2]) * static_cast<double>(data[2]);
     }
 };

@@ -11,7 +11,7 @@ FrameRenderer::FrameRenderer(
     videoCapture(videoCapture) {
 }
 
-void FrameRenderer::start() {
+void FrameRenderer::start() const {
     auto imageFrame = ImageFrame(0, 0);
 
     int32_t previousColumns = -1;
@@ -28,7 +28,8 @@ void FrameRenderer::start() {
 
         const double screenHeight = rows * 32;
         const double screenWidth = columns * 16;
-        const double frameAspectRatio = static_cast<double>(videoCapture->getOriginalHeight()) / static_cast<double>(videoCapture->getOriginalWidth());
+        const double frameAspectRatio = static_cast<double>(videoCapture->getOriginalHeight())
+                                        / static_cast<double>(videoCapture->getOriginalWidth());
         int32_t symbolHeight, symbolWidth;
         if (screenHeight / screenWidth > frameAspectRatio) {
             symbolHeight = static_cast<int32_t>(columns * frameAspectRatio * (16.0 / 32.0));
@@ -56,7 +57,7 @@ void FrameRenderer::start() {
             break;
         }
         const auto framePosition =
-                std::chrono::duration<int64_t, std::ratio<1, 1000000000>>(static_cast<int64_t>(imageFrame.getPosition() * 1e6));
+                std::chrono::duration<int64_t, std::ratio<1, 1000000000> >(static_cast<int64_t>(imageFrame.getPosition() * 1e6));
         if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
             continue;
         }
@@ -133,9 +134,9 @@ void FrameRenderer::imageToText(
                     for (int32_t localX = 0; localX < 4; localX++) {
                         const int32_t index = localY * 4 + localX;
                         convolution += getColor(
-                                secondForeground,
-                                secondBackground,
-                                image.getColorAt(y + localY, x + localX)
+                            secondForeground,
+                            secondBackground,
+                            image.getColorAt(y + localY, x + localX)
                         ) << index;
                     }
                 }

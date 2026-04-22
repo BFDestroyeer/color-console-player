@@ -49,7 +49,7 @@ public:
     /**
      * @brief Start render frames
      */
-    void start();
+    void start() const;
 
 private:
     /**

@@ -7,10 +7,10 @@
 #include <AL/alut.h>
 
 extern "C" {
-    #include <libavformat/avformat.h>
-    #include <libavcodec/avcodec.h>
-    #include <libavutil/imgutils.h>
-    #include <libswresample/swresample.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libavutil/imgutils.h>
+#include <libswresample/swresample.h>
 }
 
 class AudioPlayer {
@@ -37,9 +37,10 @@ private:
 public:
     explicit AudioPlayer(const std::string& mediaFilePath);
 
+    ~AudioPlayer();
+
     void play();
 
 private:
-    [[nodiscard]]
     bool fillBuffer(ALuint bufferId);
 };

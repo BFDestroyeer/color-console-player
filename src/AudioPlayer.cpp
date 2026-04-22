@@ -3,8 +3,7 @@
 #include <vector>
 #include <thread>
 
-AudioPlayer::AudioPlayer(const std::string &mediaFilePath) {
-    // 1. Инициализация FFmpeg
+AudioPlayer::AudioPlayer(const std::string& mediaFilePath) {
     formatContext = avformat_alloc_context();
     if (avformat_open_input(&formatContext, mediaFilePath.c_str(), nullptr, nullptr) != 0) {
         return;
@@ -32,7 +31,6 @@ AudioPlayer::AudioPlayer(const std::string &mediaFilePath) {
         return;
     }
 
-    // 2. Инициализация OpenAL
     device = alcOpenDevice(nullptr);
     alContext = alcCreateContext(device, nullptr);
     alcMakeContextCurrent(alContext);
@@ -40,23 +38,20 @@ AudioPlayer::AudioPlayer(const std::string &mediaFilePath) {
     alGenSources(1, &source);
     alGenBuffers(BUFFERS_COUNT, buffers);
 
-    // 3. Настройка Resampler (приводим любой звук к Stereo 16-bit PCM)
     resamplerContext = nullptr;
 
-    // Определяем параметры выходного формата
     AVChannelLayout out_ch_layout;
     av_channel_layout_default(&out_ch_layout, OUTPUT_CHANNELS);
 
-    // Инициализируем ресемплер с использованием новой функции
     swr_alloc_set_opts2(
-        &resamplerContext, // Указатель на контекст
-        &out_ch_layout, // Выходной макет каналов
-        OUTPUT_SAMPLE_FORMAT, // Выходной формат сэмплов
-        OUTPUT_SAMPLE_RATE, // Выходная частота
-        &codecContext->ch_layout, // Входной макет (из контекста декодера)
-        codecContext->sample_fmt, // Входной формат
-        codecContext->sample_rate, // Входная частота
-        0, // Логирование
+        &resamplerContext,
+        &out_ch_layout,
+        OUTPUT_SAMPLE_FORMAT,
+        OUTPUT_SAMPLE_RATE,
+        &codecContext->ch_layout,
+        codecContext->sample_fmt,
+        codecContext->sample_rate,
+        0,
         nullptr
     );
     swr_init(resamplerContext);
@@ -68,53 +63,50 @@ AudioPlayer::AudioPlayer(const std::string &mediaFilePath) {
     fillerTemporaryBuffer.reserve(BUFFER_SIZE);
 }
 
+AudioPlayer::~AudioPlayer() {
+    alSourceStop(source);
+    alDeleteSources(1, &source);
+    alDeleteBuffers(BUFFERS_COUNT, buffers);
+    alcMakeContextCurrent(nullptr);
+    alcDestroyContext(alContext);
+    alcCloseDevice(device);
+
+    av_free(outputBuffer);
+    av_frame_free(&frame);
+    av_packet_free(&packet);
+    avcodec_free_context(&codecContext);
+    avformat_close_input(&formatContext);
+    swr_free(&resamplerContext);
+}
+
 void AudioPlayer::play() {
     std::thread(
         [this] {
-
-        // Предварительное заполнение буферов
-        for (int i = 0; i < BUFFERS_COUNT; i++) {
-            fillBuffer(buffers[i]);
-        }
-        alSourceQueueBuffers(source, BUFFERS_COUNT, buffers);
-        alSourcePlay(source);
-
-        // 4. Основной цикл воспроизведения
-        ALint state;
-        bool playing = true;
-        while (playing) {
-            alGetSourcei(source, AL_SOURCE_STATE, &state);
-            ALint processed;
-            alGetSourcei(source, AL_BUFFERS_PROCESSED, &processed);
-
-            while (processed--) {
-                ALuint buffer;
-                alSourceUnqueueBuffers(source, 1, &buffer);
-                if (fillBuffer(buffer)) {
-                    alSourceQueueBuffers(source, 1, &buffer);
-                } else {
-                    playing = false;
-                }
+            for (unsigned int buffer : buffers) {
+                fillBuffer(buffer);
             }
+            alSourceQueueBuffers(source, BUFFERS_COUNT, buffers);
+            alSourcePlay(source);
 
-            // Если вдруг источник остановился из-за опустошения очереди
-            if (state != AL_PLAYING && playing) alSourcePlay(source);
-        }
+            ALint state;
+            bool playing = true;
+            while (playing) {
+                alGetSourcei(source, AL_SOURCE_STATE, &state);
+                ALint processed;
+                alGetSourcei(source, AL_BUFFERS_PROCESSED, &processed);
 
-        // Очистка
-        alSourceStop(source);
-        alDeleteSources(1, &source);
-        alDeleteBuffers(BUFFERS_COUNT, buffers);
-        alcMakeContextCurrent(nullptr);
-        alcDestroyContext(alContext);
-        alcCloseDevice(device);
+                while (processed--) {
+                    ALuint buffer;
+                    alSourceUnqueueBuffers(source, 1, &buffer);
+                    if (fillBuffer(buffer)) {
+                        alSourceQueueBuffers(source, 1, &buffer);
+                    } else {
+                        playing = false;
+                    }
+                }
 
-        av_free(outputBuffer);
-        av_frame_free(&frame);
-        av_packet_free(&packet);
-        avcodec_free_context(&codecContext);
-        avformat_close_input(&formatContext);
-        swr_free(&resamplerContext);
+                if (state != AL_PLAYING && playing) alSourcePlay(source);
+            }
         }).detach();
 }
 
@@ -125,7 +117,6 @@ bool AudioPlayer::fillBuffer(const ALuint bufferId) {
         if (packet->stream_index == audioStreamIndex) {
             avcodec_send_packet(codecContext, packet);
             while (avcodec_receive_frame(codecContext, frame) == 0) {
-                // Вычисляем, сколько сэмплов мы получим на выходе
                 int out_samples = av_rescale_rnd(
                     swr_get_delay(resamplerContext, codecContext->sample_rate) + frame->nb_samples,
                     OUTPUT_SAMPLE_RATE,
@@ -137,7 +128,7 @@ bool AudioPlayer::fillBuffer(const ALuint bufferId) {
                 av_samples_alloc(&out_data, nullptr, 2, out_samples, OUTPUT_SAMPLE_FORMAT, 0);
 
                 int converted = swr_convert(resamplerContext, &out_data, out_samples, frame->data, frame->nb_samples);
-                int size_in_bytes = converted * 2 * 2; // Stereo S16
+                int size_in_bytes = converted * 2 * 2;
 
                 fillerTemporaryBuffer.insert(fillerTemporaryBuffer.end(), out_data, out_data + size_in_bytes);
                 av_freep(&out_data);
@@ -156,9 +147,7 @@ bool AudioPlayer::fillBuffer(const ALuint bufferId) {
         fillerTemporaryBuffer.data(),
         fillerTemporaryBuffer.size(),
         OUTPUT_SAMPLE_RATE
-        );
+    );
     fillerTemporaryBuffer.clear();
     return true;
 }
-
-

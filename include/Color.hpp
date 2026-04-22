@@ -20,21 +20,24 @@ public:
         this->data[2] = value3;
     }
 
-    Color& operator=(const Color<uint8_t>& color) {
-        this->data[0] = color.data[0];
-        this->data[1] = color.data[1];
-        this->data[2] = color.data[2];
+    template<typename T_>
+    Color& operator=(const Color<T_>& color) {
+        this->data[0] = color[0];
+        this->data[1] = color[1];
+        this->data[2] = color[2];
         return *this;
     }
 
-    Color operator-(const Color<uint8_t>& color) const {
-        return Color(this->data[0] - color.data[0], this->data[1] - color.data[1], this->data[2] - color.data[2]);
+    template<typename T_>
+    Color operator-(const Color<T_>& color) const {
+        return Color(this->data[0] - color[0], this->data[1] - color[1], this->data[2] - color[2]);
     }
 
-    Color& operator+=(const Color<uint8_t>& color) {
-        this->data[0] += color.data[0];
-        this->data[1] += color.data[1];
-        this->data[2] += color.data[2];
+    template <typename T_>
+    Color& operator+=(const Color<T_>& color) {
+        this->data[0] += color[0];
+        this->data[1] += color[1];
+        this->data[2] += color[2];
         return *this;
     }
 
@@ -45,6 +48,7 @@ public:
         return *this;
     }
 
+    [[nodiscard]]
     const T& operator[](int i) const {
         return data[i];
     }
@@ -55,7 +59,4 @@ public:
         + static_cast<double>(data[1]) * static_cast<double>(data[1])
         + static_cast<double>(data[2]) * static_cast<double>(data[2]);
     }
-
-    friend class Color<uint8_t>;
-    friend class Color<int16_t>;
 };

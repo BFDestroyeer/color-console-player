@@ -3,8 +3,12 @@
 #include <string>
 #include <vector>
 
+#ifdef __APPLE__
+#include <OpenAL.h>
+#else
 #include <AL/al.h>
 #include <AL/alut.h>
+#endif
 
 extern "C" {
 #include <libavformat/avformat.h>

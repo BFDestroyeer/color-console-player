@@ -1,5 +1,7 @@
 #include "FrameRenderer.hpp"
 
+#include <cstring>
+
 FrameRenderer::FrameRenderer(
     const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
     const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService,

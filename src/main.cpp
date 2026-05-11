@@ -7,10 +7,17 @@
 #include "ConsoleWindowSizeService.hpp"
 #include "FrameRenderer.hpp"
 
+#include <csignal>
 #include <iostream>
-#include <string>
 
 #include "VideoCapture.hpp"
+
+void handleSigint([[maybe_unused]] int signal){
+    // Reset all styles
+    std::cout << "\x1b[0m" << std::endl;
+    exit(1);
+
+}
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -21,6 +28,12 @@ int main(int argc, char* argv[]) {
         std::cout << "File " << argv[1] << " does not exist" << std::endl;
         return EXIT_FAILURE;
     }
+
+    struct sigaction sigIntHandler{};
+    sigIntHandler.sa_handler = handleSigint;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, nullptr);
 
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();
 

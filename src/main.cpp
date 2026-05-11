@@ -16,7 +16,6 @@ void handleSigint([[maybe_unused]] int signal){
     // Reset all styles
     std::cout << "\x1b[0m" << std::endl;
     exit(1);
-
 }
 
 int main(int argc, char* argv[]) {
@@ -29,11 +28,16 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
+#ifdef _WIN32
+    std::signal(SIGINT, handleSigint);
+#endif
+#if defined(__unix__) || defined(__APPLE__)
     struct sigaction sigIntHandler{};
     sigIntHandler.sa_handler = handleSigint;
     sigemptyset(&sigIntHandler.sa_mask);
     sigIntHandler.sa_flags = 0;
     sigaction(SIGINT, &sigIntHandler, nullptr);
+#endif
 
     const auto beginPlayTime = std::chrono::high_resolution_clock::now();
 

@@ -1,6 +1,11 @@
 #include "ImageFrame.hpp"
 
-ImageFrame::ImageFrame(const uint64_t width, const uint64_t height) {
+ImageFrame::ImageFrame(
+    const uint64_t width,
+    const uint64_t height
+) : width(0),
+    height(0)
+{
     buffer = new uint8_t[width * height * 3];
     position = 0;
 }

@@ -75,6 +75,8 @@ VideoCapture::VideoCapture(const std::string &mediaFilePath) {
                     av_packet_unref(packet);
                 }
                 frameReadResult = false;
+                isFrameReady = true;
+                return;
             }
         }
     ).detach();
@@ -122,6 +124,9 @@ bool VideoCapture::read(ImageFrame& outputFrame, const int32_t width, const int3
     outputFrame.resize(width, height);
 
     while (!isFrameReady) {
+    }
+    if (!frameReadResult) {
+        return frameReadResult;
     }
 
     sws_scale(

@@ -25,7 +25,7 @@ Player requires terminal with high performance gpu accelerated rendering
 
 ### Linux/MacOS
 
-* Alacrity
+* Alacritty
 * Kitty
 
 ## Run

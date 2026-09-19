@@ -1,7 +1,6 @@
 #include "AudioPlayer.hpp"
 
 #include <vector>
-#include <thread>
 
 AudioPlayer::AudioPlayer(const std::string& mediaFilePath) {
     formatContext = avformat_alloc_context();
@@ -64,6 +63,11 @@ AudioPlayer::AudioPlayer(const std::string& mediaFilePath) {
 }
 
 AudioPlayer::~AudioPlayer() {
+    thread.request_stop();
+    if (thread.joinable()) {
+        thread.join();
+    }
+
     alSourceStop(source);
     alDeleteSources(1, &source);
     alDeleteBuffers(BUFFERS_COUNT, buffers);
@@ -80,8 +84,8 @@ AudioPlayer::~AudioPlayer() {
 }
 
 void AudioPlayer::play() {
-    std::thread(
-        [this] {
+    thread = std::jthread(
+        [this] (const std::stop_token& stopToken) {
             for (unsigned int buffer : buffers) {
                 fillBuffer(buffer);
             }
@@ -91,6 +95,9 @@ void AudioPlayer::play() {
             ALint state;
             bool playing = true;
             while (playing) {
+                if (stopToken.stop_requested()) {
+                    return;
+                }
                 alGetSourcei(source, AL_SOURCE_STATE, &state);
                 ALint processed;
                 alGetSourcei(source, AL_BUFFERS_PROCESSED, &processed);
@@ -107,7 +114,7 @@ void AudioPlayer::play() {
 
                 if (state != AL_PLAYING && playing) alSourcePlay(source);
             }
-        }).detach();
+        });
 }
 
 bool AudioPlayer::fillBuffer(const ALuint bufferId) {

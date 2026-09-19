@@ -1,7 +1,5 @@
 #include "ConsoleWindowSizeService.hpp"
 
-#include <thread>
-
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -12,14 +10,17 @@ ConsoleWindowSizeService::ConsoleWindowSizeService() {
     CONSOLE_SCREEN_BUFFER_INFO initialConsoleScreenBufferInfo;
     GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &initialConsoleScreenBufferInfo);
     consoleSize = extractConsoleWindowSize(initialConsoleScreenBufferInfo);
-    std::thread(
-        [this] {
+    thread = std::jthread(
+        [this] (const std::stop_token& stopToken) {
             CONSOLE_SCREEN_BUFFER_INFO consoleScreenBufferInfo;
             const auto consoleInput = GetStdHandle(STD_INPUT_HANDLE);
             const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
             INPUT_RECORD inputRecord;
             DWORD readCount;
             while (true) {
+                if (stopToken.stop_requested()) {
+                    return;
+                }
                 ReadConsoleInput(consoleInput, &inputRecord, 1, &readCount);
                 if (inputRecord.EventType == WINDOW_BUFFER_SIZE_EVENT) {
                     GetConsoleScreenBufferInfo(consoleOutput, &consoleScreenBufferInfo);
@@ -28,7 +29,16 @@ ConsoleWindowSizeService::ConsoleWindowSizeService() {
                 }
             }
         }
-    ).detach();
+    );
+#endif
+}
+
+ConsoleWindowSizeService::~ConsoleWindowSizeService() {
+#ifdef _WIN32
+    thread.request_stop();
+    if (thread.joinable()) {
+        thread.join();
+    }
 #endif
 }
 

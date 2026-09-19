@@ -3,6 +3,7 @@
 #include <atomic>
 #include <memory>
 #include <string>
+#include <thread>
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -43,6 +44,11 @@ private:
     std::atomic<bool> isFrameReady;
 
     std::shared_ptr<ImageFrame> imageFrame;
+
+    /**
+    * @brief Separate processing thread
+    */
+    std::jthread thread;
 
 public:
     explicit VideoCapture(const std::string& mediaFilePath);

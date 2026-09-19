@@ -4,8 +4,6 @@ extern "C" {
 #include <libavutil/imgutils.h>
 }
 
-#include <thread>
-
 VideoCapture::VideoCapture(const std::string &mediaFilePath) {
     if (avformat_open_input(&formatContext,mediaFilePath.c_str(), nullptr, nullptr) != 0) {
         return;
@@ -58,16 +56,25 @@ VideoCapture::VideoCapture(const std::string &mediaFilePath) {
     );
 
     isFrameReady = false;
-    std::thread(
-        [&] {
+    thread = std::jthread(
+        [&] (const std::stop_token& stopToken) {
             while (true) {
                 while (av_read_frame(formatContext, packet) >= 0) {
+                    if (stopToken.stop_requested()) {
+                        return;
+                    }
                     if (packet->stream_index == videoStreamIndex) {
                         if (avcodec_send_packet(codecContext, packet) >= 0) {
                             while (avcodec_receive_frame(codecContext, frame) >= 0) {
+                                if (stopToken.stop_requested()) {
+                                    return;
+                                }
                                 position = frame->pts * av_q2d(formatContext->streams[videoStreamIndex]->time_base) * 1000.0;
                                 isFrameReady = true;
                                 while (isFrameReady) {
+                                    if (stopToken.stop_requested()) {
+                                        return;
+                                    }
                                 }
                             }
                         }
@@ -79,10 +86,14 @@ VideoCapture::VideoCapture(const std::string &mediaFilePath) {
                 return;
             }
         }
-    ).detach();
+    );
 }
 
 VideoCapture::~VideoCapture() {
+    thread.request_stop();
+    if (thread.joinable()) {
+        thread.join();
+    }
     delete[] buffer;
     av_frame_free(&frame);
     av_frame_free(&bgrFrame);

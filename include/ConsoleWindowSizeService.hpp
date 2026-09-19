@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <thread>
 #include <utility>
 
 #ifdef _WIN32
@@ -18,10 +19,17 @@ private:
      * @brief Current console window size (width, height)
      */
     std::atomic<std::pair<int16_t, int16_t>> consoleSize;
+
+    /**
+    * @brief Separate processing thread
+    */
+    std::jthread thread;
 #endif
 
 public:
     ConsoleWindowSizeService();
+
+    ~ConsoleWindowSizeService();
 
     /**
      * @brief Get current console window size (width, height)

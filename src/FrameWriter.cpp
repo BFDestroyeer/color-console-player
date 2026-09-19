@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <iostream>
-#include <thread>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -21,8 +20,8 @@ FrameWriter::FrameWriter(
 #endif
     std::cout << "\x1b[?25l"; // Hide cursor
 
-    std::thread(
-        [this] {
+    thread = std::jthread(
+        [this] (const std::stop_token& stopToken) {
 #ifdef _WIN32
             const auto consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
             DWORD ret;
@@ -30,6 +29,9 @@ FrameWriter::FrameWriter(
             uint64_t previousFrameIndex = 0;
             uint64_t skippedFramesCount = 0;
             while (true) {
+                if (stopToken.stop_requested()) {
+                    return;
+                }
                 auto beginFrameTime = std::chrono::high_resolution_clock::now();
                 this->textFrameBuffer->swapWriteAndReadyFrame();
                 const auto frame = this->textFrameBuffer->getWriteFrame();
@@ -82,5 +84,12 @@ FrameWriter::FrameWriter(
                 std::cout << statusBarStream.str().substr(0, consoleWidth);
             }
         }
-    ).detach();
+    );
+}
+
+FrameWriter::~FrameWriter() {
+    thread.request_stop();
+    if (thread.joinable()) {
+        thread.join();
+    }
 }

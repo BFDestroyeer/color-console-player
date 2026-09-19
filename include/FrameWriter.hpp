@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <thread>
 
 #include "ConsoleWindowSizeService.hpp"
 #include "TextFrameBuffer.hpp"
@@ -22,6 +23,11 @@ private:
      */
     const std::shared_ptr<ConsoleWindowSizeService> consoleWindowSizeService;
 
+    /**
+     * @brief Separate processing thread
+     */
+    std::jthread thread;
+
 public:
 
     /**
@@ -34,4 +40,6 @@ public:
         const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
         const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService
     );
+
+    ~FrameWriter();
 };

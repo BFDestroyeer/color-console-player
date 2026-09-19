@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <thread>
 #include <vector>
 
 #ifdef __APPLE__
@@ -37,6 +38,11 @@ private:
     uint8_t* outputBuffer;
     ALuint buffers[BUFFERS_COUNT];
     std::vector<uint8_t> fillerTemporaryBuffer;
+
+    /**
+    * @brief Separate processing thread
+    */
+    std::jthread thread;
 
 public:
     explicit AudioPlayer(const std::string& mediaFilePath);

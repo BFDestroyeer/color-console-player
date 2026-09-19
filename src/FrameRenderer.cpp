@@ -76,9 +76,7 @@ void FrameRenderer::start() const {
         );
         textFrameBuffer->swapRenderAndReadyFrame();
 
-        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - beginPlayTime) -
-               framePosition < std::chrono::nanoseconds::zero()) {
-        }
+        std::this_thread::sleep_until(beginPlayTime + framePosition);
     }
 }
 

@@ -52,10 +52,7 @@ FrameWriter::FrameWriter(
                     skippedFramesCount += frame->getFrameIndex() - previousFrameIndex - 1;
                 }
                 previousFrameIndex = frame->getFrameIndex();
-                while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - this->beginPlayTime)
-                       - frame->getFramePosition() <
-                       std::chrono::nanoseconds::zero()) {
-                }
+                std::this_thread::sleep_until(this->beginPlayTime + frame->getFramePosition());
                 auto endFrameTime = std::chrono::steady_clock::now();
                 std::cout << std::format("\x1b[{};0H", frame->getSymbolHeight() + 1);
 

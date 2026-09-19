@@ -58,7 +58,6 @@ AudioPlayer::AudioPlayer(const std::string& mediaFilePath) {
     packet = av_packet_alloc();
     frame = av_frame_alloc();
 
-    outputBuffer = new uint8_t[BUFFER_SIZE];
     fillerTemporaryBuffer.reserve(BUFFER_SIZE);
 }
 
@@ -75,7 +74,6 @@ AudioPlayer::~AudioPlayer() {
     alcDestroyContext(alContext);
     alcCloseDevice(device);
 
-    av_free(outputBuffer);
     av_frame_free(&frame);
     av_packet_free(&packet);
     avcodec_free_context(&codecContext);

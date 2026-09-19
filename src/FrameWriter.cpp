@@ -11,10 +11,9 @@ FrameWriter::FrameWriter(
     const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
     const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
     const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService
-)
-    : beginPlayTime(beginPlayTime),
-      textFrameBuffer(textFrameBuffer),
-      consoleWindowSizeService(consoleWindowSizeService) {
+) : beginPlayTime(beginPlayTime),
+    textFrameBuffer(textFrameBuffer),
+    consoleWindowSizeService(consoleWindowSizeService) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
@@ -33,7 +32,9 @@ FrameWriter::FrameWriter(
                     return;
                 }
                 auto beginFrameTime = std::chrono::high_resolution_clock::now();
-                this->textFrameBuffer->swapWriteAndReadyFrame();
+                if (!this->textFrameBuffer->swapWriteAndReadyFrame(stopToken)) {
+                    return;
+                }
                 const auto frame = this->textFrameBuffer->getWriteFrame();
                 auto beginWriteTime = std::chrono::high_resolution_clock::now();
 #ifdef _WIN32
@@ -65,7 +66,7 @@ FrameWriter::FrameWriter(
                 ).count()) / 1e6;
 
                 std::stringstream statusBarStream;
-                statusBarStream<< "Frame time: " << std::format(
+                statusBarStream << "Frame time: " << std::format(
                     "{:10.3f}",
                     std::chrono::duration_cast<std::chrono::nanoseconds>(endFrameTime - beginFrameTime).count() / 1e6
                 );

@@ -48,9 +48,12 @@ void TextFrameBuffer::swapRenderAndReadyFrame() {
     std::atomic_store(&renderFrame, localReadyFrame);
 }
 
-void TextFrameBuffer::swapWriteAndReadyFrame() {
+bool TextFrameBuffer::swapWriteAndReadyFrame(const std::stop_token& stopToken) {
     std::shared_ptr<TextFrame> localReadyFrame;
     while (true) {
+        if (stopToken.stop_requested()) {
+            return false;
+        }
         localReadyFrame = std::atomic_load(&readyFrame);
         auto localWriteFrame = std::atomic_load(&writeFrame);
         if (localReadyFrame == nullptr || localWriteFrame == nullptr) {
@@ -64,6 +67,7 @@ void TextFrameBuffer::swapWriteAndReadyFrame() {
         }
     }
     std::atomic_store(&writeFrame, localReadyFrame);
+    return true;
 }
 
 std::shared_ptr<TextFrame> TextFrameBuffer::getRenderFrame() const {

@@ -35,7 +35,6 @@ private:
     ALuint source;
     ALCdevice* device;
     ALCcontext* alContext;
-    uint8_t* outputBuffer;
     ALuint buffers[BUFFERS_COUNT];
     std::vector<uint8_t> fillerTemporaryBuffer;
 

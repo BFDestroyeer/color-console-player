@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <thread>
 
 #include <TextFrame.hpp>
 
@@ -43,8 +44,9 @@ public:
 
     /**
      * @brief Swap frame for writing with frame ready for writing
+     * @return {@code true} if frames was successfully swapped, {@code false} if stop was requested
      */
-    void swapWriteAndReadyFrame();
+    bool swapWriteAndReadyFrame(const std::stop_token& stopToken);
 
     /**
      * @brief Get frame for rendering

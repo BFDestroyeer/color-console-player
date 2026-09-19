@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
     sigaction(SIGINT, &sigIntHandler, nullptr);
 #endif
 
-    const auto beginPlayTime = std::chrono::high_resolution_clock::now();
+    const auto beginPlayTime = std::chrono::steady_clock::now();
 
     const auto consoleWindowSizeService = std::make_shared<ConsoleWindowSizeService>();
     const auto textFrameBuffer = std::make_shared<TextFrameBuffer>(0);

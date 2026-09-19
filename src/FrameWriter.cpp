@@ -8,7 +8,7 @@
 #endif
 
 FrameWriter::FrameWriter(
-    const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
+    const std::chrono::time_point<std::chrono::steady_clock>& beginPlayTime,
     const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
     const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService
 ) : beginPlayTime(beginPlayTime),
@@ -31,12 +31,12 @@ FrameWriter::FrameWriter(
                 if (stopToken.stop_requested()) {
                     return;
                 }
-                auto beginFrameTime = std::chrono::high_resolution_clock::now();
+                auto beginFrameTime = std::chrono::steady_clock::now();
                 if (!this->textFrameBuffer->swapWriteAndReadyFrame(stopToken)) {
                     return;
                 }
                 const auto frame = this->textFrameBuffer->getWriteFrame();
-                auto beginWriteTime = std::chrono::high_resolution_clock::now();
+                auto beginWriteTime = std::chrono::steady_clock::now();
 #ifdef _WIN32
                 SetConsoleCursorPosition(consoleOutput, {0, 0});
                 WriteConsoleA(consoleOutput, frame->getBuffer(), frame->getBufferSize(), &ret, nullptr);
@@ -47,16 +47,16 @@ FrameWriter::FrameWriter(
                 std::fflush(stdout);
 #endif
                 std::cout << "\x1b[0;0m";
-                auto endWriteTime = std::chrono::high_resolution_clock::now();
+                auto endWriteTime = std::chrono::steady_clock::now();
                 if (previousFrameIndex != 0) {
                     skippedFramesCount += frame->getFrameIndex() - previousFrameIndex - 1;
                 }
                 previousFrameIndex = frame->getFrameIndex();
-                while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - this->beginPlayTime)
+                while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - this->beginPlayTime)
                        - frame->getFramePosition() <
                        std::chrono::nanoseconds::zero()) {
                 }
-                auto endFrameTime = std::chrono::high_resolution_clock::now();
+                auto endFrameTime = std::chrono::steady_clock::now();
                 std::cout << std::format("\x1b[{};0H", frame->getSymbolHeight() + 1);
 
                 auto symbolCount = frame->getSymbolWidth() * frame->getSymbolHeight();

@@ -14,7 +14,7 @@ private:
     /**
      * @brief Playback start time
      */
-    const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime;
+    const std::chrono::time_point<std::chrono::steady_clock>& beginPlayTime;
 
     /**
      * @brief Console window size service
@@ -40,7 +40,7 @@ public:
      * @param videoCapture OpenCV video capture
      */
     FrameRenderer(
-        const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
+        const std::chrono::time_point<std::chrono::steady_clock>& beginPlayTime,
         const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService,
         const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
         const std::shared_ptr<VideoCapture>& videoCapture

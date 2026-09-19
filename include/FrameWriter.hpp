@@ -11,7 +11,7 @@ private:
     /**
      * @brief Playback start time
      */
-    const std::chrono::time_point<std::chrono::high_resolution_clock> beginPlayTime;
+    const std::chrono::time_point<std::chrono::steady_clock> beginPlayTime;
 
     /**
      * @brief Buffer of text frames
@@ -36,7 +36,7 @@ public:
      * @param consoleWindowSizeService Console window size service
      */
     FrameWriter(
-        const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
+        const std::chrono::time_point<std::chrono::steady_clock>& beginPlayTime,
         const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
         const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService
     );

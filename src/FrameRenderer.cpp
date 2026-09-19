@@ -3,7 +3,7 @@
 #include <cstring>
 
 FrameRenderer::FrameRenderer(
-    const std::chrono::time_point<std::chrono::high_resolution_clock>& beginPlayTime,
+    const std::chrono::time_point<std::chrono::steady_clock>& beginPlayTime,
     const std::shared_ptr<ConsoleWindowSizeService>& consoleWindowSizeService,
     const std::shared_ptr<TextFrameBuffer>& textFrameBuffer,
     const std::shared_ptr<VideoCapture>& videoCapture
@@ -24,7 +24,7 @@ void FrameRenderer::start() const {
 
     uint64_t frameIndex = 0;
     while (true) {
-        auto beginRenderTime = std::chrono::high_resolution_clock::now();
+        auto beginRenderTime = std::chrono::steady_clock::now();
 
         auto [columns, rows] = consoleWindowSizeService->getConsoleSize();
 
@@ -60,13 +60,13 @@ void FrameRenderer::start() const {
         }
         const auto framePosition =
                 std::chrono::duration<int64_t, std::ratio<1, 1000000000> >(static_cast<int64_t>(imageFrame.getPosition() * 1e6));
-        if ((std::chrono::high_resolution_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
+        if ((std::chrono::steady_clock::now() - beginPlayTime) - framePosition > frameDuration / 3) {
             continue;
         }
 
         auto renderFrame = textFrameBuffer->getRenderFrame();
         imageToText(imageFrame, (columns - symbolWidth) / 2, renderFrame->getBuffer());
-        auto endRenderTime = std::chrono::high_resolution_clock::now();
+        auto endRenderTime = std::chrono::steady_clock::now();
         renderFrame->updateFrame(
             frameIndex++,
             framePosition,
@@ -76,7 +76,7 @@ void FrameRenderer::start() const {
         );
         textFrameBuffer->swapRenderAndReadyFrame();
 
-        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - beginPlayTime) -
+        while (std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - beginPlayTime) -
                framePosition < std::chrono::nanoseconds::zero()) {
         }
     }
